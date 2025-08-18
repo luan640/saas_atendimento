@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'apps.accounts',
+    'apps.cadastro',
 
 ]
 
@@ -128,9 +129,9 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = '/accounts/owner/login/'
-LOGIN_REDIRECT_URL = '/accounts/owner/dashboard/'
-LOGOUT_REDIRECT_URL = '/accounts/owner/login/'
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/login/'
 
 # E-mails em console (para testes)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

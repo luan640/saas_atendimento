@@ -12,7 +12,7 @@ class SubscriptionRequiredMiddleware:
         allowed = (
             reverse('accounts:owner_login'),
             reverse('accounts:owner_logout'),
-            reverse('accounts:client_start'),
+            reverse('accounts:client_start_loja'),
             reverse('accounts:client_verify'),
         )
         if request.user.is_authenticated and getattr(request.user, 'is_owner', False):
