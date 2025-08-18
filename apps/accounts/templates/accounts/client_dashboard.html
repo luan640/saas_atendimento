@@ -1,0 +1,6 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Área do Cliente{% endblock %}
+{% block content %}
+<h3 class="mb-3">Olá, {{ request.user.full_name|default:"Cliente" }}</h3>
+<p>Você está autenticado como cliente ({{ request.user.phone }}). A partir daqui você pode listar serviços, escolher profissional e criar agendamento.</p>
+{% endblock %}
