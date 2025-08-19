@@ -14,7 +14,7 @@
         {% for loja in lojas %}
         <tr>
           <td>{{ loja.nome }}</td>
-          <td><a href="{{ loja.get_public_url request }}" target="_blank">{{ loja.get_public_url request }}</a></td>
+          <td><a href="{{ loja.slug }}" target="_blank">{{ loja.slug }}</a></td>
           <td>
             {% if loja.ativa %}
               <span class="badge bg-success">Ativa</span>

@@ -18,7 +18,7 @@
         <tr>
           <td>{{ loja.nome }}</td>
           <td>
-            <a href="{{ loja.get_public_url request }}" target="_blank">{{ loja.get_public_url request }}</a>
+            <a href="{{ loja.slug }}" target="_blank">{{ loja.slug }}</a>
           </td>
           <td>
             {% if loja.ativa %}
