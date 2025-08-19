@@ -1,6 +1,3 @@
-{% extends 'accounts/base.html' %}
-{% block title %}Minhas Lojas{% endblock %}
-{% block content %}
 <div class="row">
   <div class="col-md-5">
     <h4 class="mb-3">Nova loja</h4>
@@ -17,9 +14,7 @@
         {% for loja in lojas %}
         <tr>
           <td>{{ loja.nome }}</td>
-          <td>
-            <a href="{{ loja.get_public_url request }}" target="_blank">{{ loja.get_public_url request }}</a>
-          </td>
+          <td><a href="{{ loja.get_public_url request }}" target="_blank">{{ loja.get_public_url request }}</a></td>
           <td>
             {% if loja.ativa %}
               <span class="badge bg-success">Ativa</span>
@@ -41,4 +36,3 @@
     </table>
   </div>
 </div>
-{% endblock %}

@@ -1,0 +1,6 @@
+<h4>Excluir loja</h4>
+<p>Tem certeza que deseja remover {{ loja.nome }}?</p>
+<form method="post">{% csrf_token %}
+  <button class="btn btn-danger" type="submit">Confirmar</button>
+  <a class="btn btn-secondary" hx-get="{% url 'cadastro:owner_shops' %}" hx-target="#content" hx-push-url="true">Cancelar</a>
+</form>
