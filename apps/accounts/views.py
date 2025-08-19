@@ -32,13 +32,21 @@ def owner_login(request):
             return redirect('accounts:owner_dashboard')
     else:
         form = OwnerLoginForm()
-    return render(request, 'accounts/owner_login.html', {'form': form})
+
+    template = 'accounts/owner_login.html'
+    if request.headers.get('HX-Request'):
+        template = 'accounts/partials/owner_login.html'
+    return render(request, template, {'form': form})
 
 @login_required
 def owner_dashboard(request):
     user = request.user
     sub = getattr(user, 'subscription', None)
-    return render(request, 'accounts/owner_dashboard.html', {'subscription': sub})
+
+    template = 'accounts/owner_dashboard.html'
+    if request.headers.get('HX-Request'):
+        template = 'accounts/partials/owner_dashboard.html'
+    return render(request, template, {'subscription': sub})
 
 @login_required
 def owner_logout(request):
