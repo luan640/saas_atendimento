@@ -1,0 +1,10 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Excluir Serviço{% endblock %}
+{% block content %}
+<h4>Excluir serviço</h4>
+<p>Tem certeza que deseja remover {{ servico.nome }}?</p>
+<form method="post">{% csrf_token %}
+  <button class="btn btn-danger" type="submit">Confirmar</button>
+  <a class="btn btn-secondary" hx-get="{% url 'cadastro:owner_services' loja.id %}" hx-target="#content" hx-push-url="true">Cancelar</a>
+</form>
+{% endblock %}

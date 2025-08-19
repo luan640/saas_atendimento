@@ -1,0 +1,31 @@
+<h4 class="mb-3">Serviços de {{ loja.nome }}</h4>
+<div class="row">
+  <div class="col-md-5">
+    <h5>Novo serviço</h5>
+    <form method="post">{% csrf_token %}
+      {{ form.as_p }}
+      <button class="btn btn-primary w-100" type="submit">Salvar</button>
+    </form>
+  </div>
+  <div class="col-md-7">
+    <h5>Lista</h5>
+    <table class="table table-striped">
+      <thead><tr><th>Nome</th><th>Preço</th><th>Ações</th></tr></thead>
+      <tbody>
+        {% for serv in servicos %}
+        <tr>
+          <td>{{ serv.nome }}</td>
+          <td>R$ {{ serv.preco }}</td>
+          <td>
+            <a class="btn btn-sm btn-secondary" hx-get="{% url 'cadastro:owner_service_edit' loja.id serv.id %}" hx-target="#content" hx-push-url="true">Editar</a>
+            <a class="btn btn-sm btn-danger" hx-get="{% url 'cadastro:owner_service_delete' loja.id serv.id %}" hx-target="#content" hx-push-url="true">Excluir</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-muted">Nenhum serviço.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<a class="btn btn-secondary mt-3" hx-get="{% url 'cadastro:owner_shops' %}" hx-target="#content" hx-push-url="true">Voltar</a>

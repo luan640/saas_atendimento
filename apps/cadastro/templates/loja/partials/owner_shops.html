@@ -9,7 +9,11 @@
   <div class="col-md-7">
     <h4 class="mb-3">Lojas cadastradas</h4>
     <table class="table table-striped">
+<<<<<<< HEAD
       <thead><tr><th>Nome</th><th>Link público</th><th>Status</th></tr></thead>
+=======
+      <thead><tr><th>Nome</th><th>Link público</th><th>Status</th><th>Ações</th></tr></thead>
+>>>>>>> e16db72322a4bf70d24ab74c71b523b072ce29a7
       <tbody>
         {% for loja in lojas %}
         <tr>
@@ -22,9 +26,21 @@
               <span class="badge bg-secondary">Inativa</span>
             {% endif %}
           </td>
+<<<<<<< HEAD
         </tr>
         {% empty %}
         <tr><td colspan="3" class="text-muted">Nenhuma loja ainda.</td></tr>
+=======
+          <td>
+            <a class="btn btn-sm btn-secondary" hx-get="{% url 'cadastro:owner_shop_edit' loja.pk %}" hx-target="#content" hx-push-url="true">Editar</a>
+            <a class="btn btn-sm btn-info" hx-get="{% url 'cadastro:owner_staff' loja.pk %}" hx-target="#content" hx-push-url="true">Funcionários</a>
+            <a class="btn btn-sm btn-warning" hx-get="{% url 'cadastro:owner_services' loja.pk %}" hx-target="#content" hx-push-url="true">Serviços</a>
+            <a class="btn btn-sm btn-danger" hx-get="{% url 'cadastro:owner_shop_delete' loja.pk %}" hx-target="#content" hx-push-url="true">Excluir</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-muted">Nenhuma loja ainda.</td></tr>
+>>>>>>> e16db72322a4bf70d24ab74c71b523b072ce29a7
         {% endfor %}
       </tbody>
     </table>

@@ -1,0 +1,6 @@
+<h4 class="mb-3">Editar funcionário</h4>
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <button class="btn btn-primary" type="submit">Salvar</button>
+  <a class="btn btn-secondary" hx-get="{% url 'cadastro:owner_staff' loja.id %}" hx-target="#content" hx-push-url="true">Voltar</a>
+</form>
