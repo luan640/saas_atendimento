@@ -19,12 +19,16 @@ def owner_shops(request):
             loja.owner = request.user
             loja.save()
             messages.success(request, 'Loja criada com sucesso!')
-            return redirect('loja:owner_shops')
+            return redirect('cadastro:owner_shops')
     else:
         form = LojaForm()
 
     lojas = request.user.lojas.all().order_by('-criada_em')
-    return render(request, 'loja/owner_shops.html', {
+
+    template = 'loja/owner_shops.html'
+    if request.headers.get('HX-Request'):
+        template = 'loja/partials/owner_shops.html'
+    return render(request, template, {
         'form': form,
         'lojas': lojas,
     })
