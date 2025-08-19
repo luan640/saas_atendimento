@@ -1,9 +1,20 @@
-<h3 class="mb-3">Bem-vindo, {{ request.user.email }}</h3>
+<h4 class="mb-3">Bem-vindo, {{ request.user.email }}</h4>
+
 {% if subscription %}
   <p>Plano atual: <strong>{{ subscription.get_plan_display }}</strong></p>
-  <p>Vigência: {{ subscription.start_date|date:'d/m/Y H:i' }} até <strong>{{ subscription.end_date|date:'d/m/Y H:i' }}</strong></p>
-  <p>Status: {% if subscription.is_active %}<span class="badge bg-success">Ativa</span>{% else %}<span class="badge bg-danger">Expirada</span>{% endif %}</p>
+  <p>Vigência: {{ subscription.start_date|date:'d/m/Y H:i' }} até
+     <strong>{{ subscription.end_date|date:'d/m/Y H:i' }}</strong></p>
+  <p>Status:
+    {% if subscription.is_active %}
+      <span class="badge bg-success">Ativa</span>
+    {% else %}
+      <span class="badge bg-danger">Expirada</span>
+    {% endif %}
+  </p>
 {% else %}
   <div class="alert alert-warning">Sem assinatura vinculada.</div>
 {% endif %}
-<a class="btn btn-secondary" href="{% url 'accounts:owner_logout' %}">Sair</a>
+
+<div class="d-flex gap-2 mt-3">
+  <a class="btn btn-secondary" href="{% url 'accounts:owner_logout' %}">Sair</a>
+</div>

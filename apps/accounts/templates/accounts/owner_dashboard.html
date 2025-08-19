@@ -1,13 +1,23 @@
 {% extends 'accounts/base.html' %}
 {% block title %}Dashboard do Dono{% endblock %}
+
 {% block content %}
-<h3 class="mb-3">Bem-vindo, {{ request.user.email }}</h3>
-{% if subscription %}
-  <p>Plano atual: <strong>{{ subscription.get_plan_display }}</strong></p>
-  <p>Vigência: {{ subscription.start_date|date:'d/m/Y H:i' }} até <strong>{{ subscription.end_date|date:'d/m/Y H:i' }}</strong></p>
-  <p>Status: {% if subscription.is_active %}<span class="badge bg-success">Ativa</span>{% else %}<span class="badge bg-danger">Expirada</span>{% endif %}</p>
-{% else %}
-  <div class="alert alert-warning">Sem assinatura vinculada.</div>
-{% endif %}
-<a class="btn btn-secondary" href="{% url 'accounts:owner_logout' %}">Sair</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">Dashboard</h3>
+  <button
+    class="btn btn-sm btn-outline-primary"
+    hx-get="{% url 'accounts:owner_dashboard' %}"
+    hx-target="#owner-dashboard"
+    hx-swap="innerHTML"
+    hx-indicator="#dash-loading">
+    Atualizar
+  </button>
+</div>
+
+<div id="owner-dashboard">
+  {# Conteúdo dinâmico: renderizamos o parcial aqui #}
+  {% include 'accounts/partials/owner_dashboard.html' %}
+</div>
+
+<div id="dash-loading" class="mt-3" style="display:none;">Carregando...</div>
 {% endblock %}

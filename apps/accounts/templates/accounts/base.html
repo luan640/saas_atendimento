@@ -16,10 +16,13 @@
         <a class="nav-link text-white" hx-get="{% url 'accounts:owner_dashboard' %}" hx-target="#content" hx-push-url="true">Dashboard</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link text-white" hx-get="{% url 'accounts:owner_login' %}" hx-target="#content" hx-push-url="true">Login</a>
+        <a class="nav-link text-white" hx-get="{% url 'cadastro:owner_shops' %}" hx-target="#content" hx-push-url="true">Lojas</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link text-white" hx-get="{% url 'cadastro:owner_shops' %}" hx-target="#content" hx-push-url="true">Lojas</a>
+        <a class="nav-link text-white" hx-get="{% url 'cadastro:funcionarios' %}" hx-target="#content" hx-push-url="true">Funcionários</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link text-white" hx-get="{% url 'cadastro:servicos' %}" hx-target="#content" hx-push-url="true">Serviços</a>
       </li>
     </ul>
   </nav>

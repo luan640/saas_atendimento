@@ -1,0 +1,87 @@
+<div class="row">
+  <div class="col-12">
+    <form class="mb-3 d-flex gap-2"
+          method="get"
+          hx-get="{% url 'cadastro:servicos' %}"
+          hx-target="#servicos-tbody"
+          hx-select="#servicos-tbody"
+          hx-swap="outerHTML"
+          hx-indicator="#servicos-loading"
+          hx-push-url="false">
+      <label class="form-label m-0 align-self-center">Loja:</label>
+      <select name="loja" class="form-select" hx-trigger="change delay:150ms">
+        {% for l in lojas %}
+          <option value="{{ l.id }}" {% if loja and l.id == loja.id %}selected{% endif %}>
+            {{ l.nome }}
+          </option>
+        {% endfor %}
+      </select>
+      <noscript><button class="btn btn-outline-secondary">Trocar</button></noscript>
+    </form>
+  </div>
+</div>
+
+{% if not loja %}
+  <div class="alert alert-warning">Você ainda não possui lojas. Crie uma para cadastrar serviços.</div>
+{% else %}
+<div class="row">
+  <div class="col-md-5">
+    <h4 class="mb-3">Novo serviço</h4>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    {# POST atualiza o fragmento inteiro para limpar o form e reprocessar M2M #}
+    <form method="post"
+          hx-post="{% url 'cadastro:servicos' %}"
+          hx-target="#servicos-fragment"
+          hx-swap="innerHTML"
+          hx-indicator="#servicos-loading">
+      {% csrf_token %}
+      <input type="hidden" name="loja" value="{{ loja.id }}">
+      {{ form.as_p }}
+      <button class="btn btn-primary w-100" type="submit">Salvar</button>
+    </form>
+  </div>
+
+  <div class="col-md-7">
+    <h4 class="mb-3">Lista</h4>
+    <table class="table table-striped align-middle">
+      <thead>
+        <tr>
+          <th>Nome</th><th>Preço</th><th>Duração</th><th>Profissionais</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="servicos-tbody">
+        {% for s in servicos %}
+        <tr>
+          <td>{{ s.nome }}</td>
+          <td>R$ {{ s.preco }}</td>
+          <td>{{ s.duracao_minutos }} min</td>
+          <td>
+            {% with profs=s.profissionais.all %}
+              {% if profs %}
+                {% for p in profs %}
+                  <span class="badge text-bg-light">{{ p.nome }}</span>
+                {% endfor %}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td>
+            {% if s.ativo %}<span class="badge bg-success">Ativo</span>
+            {% else %}<span class="badge bg-secondary">Inativo</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-muted">Nenhum serviço ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}

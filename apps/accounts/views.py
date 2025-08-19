@@ -6,6 +6,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.http import HttpResponse
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
@@ -14,39 +15,49 @@ from apps.cadastro.models import Loja
 # ========== OWNER ==========
 
 def owner_login(request):
+    form = OwnerLoginForm(request.POST or None)
+
     if request.method == 'POST':
-        form = OwnerLoginForm(request.POST)
         if form.is_valid():
             user = form.cleaned_data['user']
-            # garante assinatura
+
+            # garante assinatura (trial no 1º login)
             sub = getattr(user, 'subscription', None)
             if not sub:
-                # cria trial de 7 dias
-                sub = Subscription.objects.create(
+                Subscription.objects.create(
                     owner=user,
                     plan=Plan.FREE,
                     start_date=timezone.now(),
                     end_date=timezone.now() + timedelta(days=7)
                 )
-            login(request, user)
-            return redirect('accounts:owner_dashboard')
-    else:
-        form = OwnerLoginForm()
 
-    template = 'accounts/owner_login.html'
+            login(request, user)
+
+            # Se veio via HTMX, redireciona a página toda:
+            if request.headers.get('HX-Request'):
+                resp = HttpResponse(status=204)  # No Content
+                resp['HX-Redirect'] = reverse('accounts:owner_dashboard')
+                return resp
+
+            return redirect('accounts:owner_dashboard')
+
+        # Form inválido
+        template = 'accounts/partials/owner_login.html' if request.headers.get('HX-Request') \
+                   else 'accounts/owner_login.html'
+        return render(request, template, {'form': form}, status=422)
+
+    # GET
     if request.headers.get('HX-Request'):
-        template = 'accounts/partials/owner_login.html'
-    return render(request, template, {'form': form})
+        return render(request, 'accounts/partials/owner_login.html', {'form': form})
+    return render(request, 'accounts/owner_login.html', {'form': form})
 
 @login_required
 def owner_dashboard(request):
-    user = request.user
-    sub = getattr(user, 'subscription', None)
-
-    template = 'accounts/owner_dashboard.html'
+    sub = getattr(request.user, 'subscription', None)
+    ctx = {'subscription': sub}
     if request.headers.get('HX-Request'):
-        template = 'accounts/partials/owner_dashboard.html'
-    return render(request, template, {'subscription': sub})
+        return render(request, 'accounts/partials/owner_dashboard.html', ctx)
+    return render(request, 'accounts/owner_dashboard.html', ctx)
 
 @login_required
 def owner_logout(request):

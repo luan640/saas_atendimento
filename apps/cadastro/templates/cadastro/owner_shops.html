@@ -1,0 +1,12 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Minhas Lojas{% endblock %}
+
+{% block content %}
+<div id="shops-fragment">
+  {# evita duplicação: só inclui o parcial #}
+  {% include 'cadastro/partials/owner_shops.html' %}
+</div>
+
+{# indicador opcional para HTMX #}
+<div id="shops-loading" class="mt-2" style="display:none;">Carregando...</div>
+{% endblock %}

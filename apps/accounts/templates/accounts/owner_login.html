@@ -1,15 +1,16 @@
 {% extends 'accounts/base.html' %}
 {% block title %}Login do Dono{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-5">
-    <h3 class="mb-3">Login (Dono)</h3>
-    <form method="post">{% csrf_token %}
-      {{ form.as_p }}
-      <button class="btn btn-primary w-100" type="submit">Entrar</button>
-    </form>
-    <hr>
-    <p class="text-muted small">Primeiro login cria automaticamente o período Free (7 dias).</p>
-  </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">Login (Dono)</h3>
 </div>
+
+<div id="owner-login">
+  {# Renderizamos o fragmento aqui para evitar duplicação #}
+  {% include 'accounts/partials/owner_login.html' %}
+</div>
+
+{# Indicador opcional (aparece durante requests HTMX se usar hx-indicator) #}
+<div id="login-loading" style="display:none;">Carregando...</div>
 {% endblock %}
