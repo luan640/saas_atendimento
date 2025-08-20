@@ -185,7 +185,8 @@ def servicos(request):
     if request.method == 'POST':
         form = ServicoForm(request.POST, lojas=lojas_qs)
         if form.is_valid():
-            obj = form.save()
+            obj = form.save(commit=False)
+            obj.save()
             form.save_m2m()
             messages.success(request, 'Serviço salvo!')
             # depois de salvar, recarrega a lista já com filtros
@@ -197,6 +198,7 @@ def servicos(request):
                 'servicos': qs,
                 'filtros': filtros,
                 'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
+                'form_salvo': True,
             }
             if request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content':
                 # devolve só o tbody; a modal fecha via hx-on no template
