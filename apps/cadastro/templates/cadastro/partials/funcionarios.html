@@ -9,7 +9,14 @@
           hx-indicator="#funcionarios-loading"
           hx-push-url="false">
       <label class="form-label m-0 align-self-center">Loja:</label>
-      <select name="loja" class="form-select" hx-trigger="change delay:150ms">
+      <select name="loja" class="form-select"
+          hx-get="{% url 'cadastro:funcionarios' %}"
+          hx-target="#funcionarios-tbody"
+          hx-select="#funcionarios-tbody"
+          hx-swap="outerHTML"
+          hx-indicator="#funcionarios-loading"
+          hx-push-url="false"
+          hx-trigger="change delay:150ms">
         {% for l in lojas %}
           <option value="{{ l.id }}" {% if loja and l.id == loja.id %}selected{% endif %}>
             {{ l.nome }}

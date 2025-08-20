@@ -17,6 +17,54 @@ def _get_loja_ativa(request, lojas_qs):
             loja = None
     return loja or lojas_qs.first()
 
+def _parse_filtros(request):
+    data = request.GET if request.method == 'GET' else request.POST
+    return {
+        'q': (data.get('q') or '').strip() or None,
+        'status': (data.get('status') or '').strip() or None,
+        'prof': (data.get('prof') or '').strip() or None,
+        'preco_min': (data.get('preco_min') or '').strip() or None,
+        'preco_max': (data.get('preco_max') or '').strip() or None,
+        'dur_min': (data.get('dur_min') or '').strip() or None,
+        'dur_max': (data.get('dur_max') or '').strip() or None,
+    }
+
+def _aplica_filtros(qs, filtros):
+    if filtros['q']:
+        qs = qs.filter(models.Q(nome__icontains=filtros['q']) | models.Q(descricao__icontains=filtros['q']))
+    if filtros['status'] == 'ativos':
+        qs = qs.filter(ativo=True)
+    elif filtros['status'] == 'inativos':
+        qs = qs.filter(ativo=False)
+    if filtros['prof']:
+        try:
+            qs = qs.filter(profissionais__id=int(filtros['prof']))
+        except ValueError:
+            pass
+    # preço
+    if filtros['preco_min']:
+        try:
+            qs = qs.filter(preco__gte=float(filtros['preco_min']))
+        except ValueError:
+            pass
+    if filtros['preco_max']:
+        try:
+            qs = qs.filter(preco__lte=float(filtros['preco_max']))
+        except ValueError:
+            pass
+    # duração
+    if filtros['dur_min']:
+        try:
+            qs = qs.filter(duracao_minutos__gte=int(filtros['dur_min']))
+        except ValueError:
+            pass
+    if filtros['dur_max']:
+        try:
+            qs = qs.filter(duracao_minutos__lte=int(filtros['dur_max']))
+        except ValueError:
+            pass
+    return qs.distinct()
+
 @login_required
 def owner_shops(request):
     if not getattr(request.user, 'is_owner', False):
@@ -104,12 +152,25 @@ def servicos(request):
         return redirect('accounts:owner_login')
 
     lojas_qs = request.user.lojas.order_by('nome')
-    loja = _get_loja_ativa(request, lojas_qs)
 
+    # loja selecionada (mantém sua lógica existente)
+    loja_id = request.GET.get('loja') or request.POST.get('loja')
+    loja = None
+    if loja_id:
+        try:
+            loja = lojas_qs.filter(id=int(loja_id)).first()
+        except (TypeError, ValueError):
+            loja = None
+    loja = loja or lojas_qs.first()
+
+    # se não há loja, renderiza vazio
     if not loja:
-        ctx = {'lojas': lojas_qs, 'loja': None, 'form': None, 'servicos': []}
+        ctx = {'lojas': lojas_qs, 'loja': None, 'form': None, 'servicos': [], 'filtros': {}, 'profissionais': []}
         tpl = 'cadastro/partials/servicos.html' if request.headers.get('HX-Request') else 'cadastro/servicos.html'
         return render(request, tpl, ctx)
+
+    # filtros
+    filtros = _parse_filtros(request)
 
     if request.method == 'POST':
         form = ServicoForm(request.POST, loja=loja)
@@ -119,21 +180,36 @@ def servicos(request):
             obj.save()
             form.save_m2m()
             messages.success(request, 'Serviço salvo!')
-            qs = loja.servicos.order_by('nome')
-            form = ServicoForm(loja=loja)  # limpa após salvar
-            ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'servicos': qs}
+            # depois de salvar, recarrega a lista já com filtros
+            qs = _aplica_filtros(loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'), filtros)
+            ctx = {
+                'lojas': lojas_qs, 'loja': loja, 'form': ServicoForm(loja=loja),
+                'servicos': qs, 'filtros': filtros,
+                'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
+            }
             if request.headers.get('HX-Request'):
+                # devolve só o tbody; a modal fecha via hx-on no template
                 return render(request, 'cadastro/partials/servicos.html', ctx)
             return redirect(f"{request.path}?loja={loja.id}")
-        qs = loja.servicos.order_by('nome')
-        ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'servicos': qs}
-        tpl = 'cadastro/partials/servicos.html' if request.headers.get('HX-Request') else 'cadastro/servicos.html'
-        return render(request, tpl, ctx, status=422)
+        else:
+            # form inválido: renderiza página completa (não-HTMX) ou tbody (HTMX) sem quebrar o alvo
+            qs = _aplica_filtros(loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'), filtros)
+            ctx = {
+                'lojas': lojas_qs, 'loja': loja, 'form': form,
+                'servicos': qs, 'filtros': filtros,
+                'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
+            }
+            tpl = 'cadastro/partials/servicos.html' if request.headers.get('HX-Request') else 'cadastro/servicos.html'
+            return render(request, tpl, ctx, status=422)
 
-    # GET
+    # GET (lista com filtros)
     form = ServicoForm(loja=loja)
-    qs = loja.servicos.order_by('nome')
-    ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'servicos': qs}
+    qs = _aplica_filtros(loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'), filtros)
+    ctx = {
+        'lojas': lojas_qs, 'loja': loja, 'form': form,
+        'servicos': qs, 'filtros': filtros,
+        'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
+    }
     if request.headers.get('HX-Request'):
         return render(request, 'cadastro/partials/servicos.html', ctx)
     return render(request, 'cadastro/servicos.html', ctx)

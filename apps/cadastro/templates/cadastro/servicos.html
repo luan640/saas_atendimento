@@ -2,13 +2,206 @@
 {% block title %}Serviços{% endblock %}
 
 {% block content %}
+
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h3 class="m-0">Serviços</h3>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalServico">
+    Novo serviço
+  </button>
 </div>
 
-<div id="servicos-fragment">
-  {% include 'cadastro/partials/servicos.html' %}
+{# ------------------- FILTROS ------------------- #}
+<form id="filtros-servicos" class="row g-2 mb-3">
+  <div class="col-md-3">
+    <label class="form-label mb-1">Loja</label>
+    <select name="loja" class="form-select"
+            hx-get="{% url 'cadastro:servicos' %}"
+            hx-target="#servicos-tbody"
+            hx-select="#servicos-tbody"
+            hx-include="#filtros-servicos"
+            hx-swap="outerHTML"
+            hx-indicator="#servicos-loading"
+            hx-push-url="true"
+            hx-trigger="change">
+      {% for l in lojas %}
+        <option value="{{ l.id }}" {% if loja and l.id == loja.id %}selected{% endif %}>{{ l.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-3">
+    <label class="form-label mb-1">Busca</label>
+    <input type="text" class="form-control" name="q" placeholder="Nome/descrição"
+           value="{{ filtros.q|default_if_none:'' }}"
+           hx-get="{% url 'cadastro:servicos' %}"
+           hx-target="#servicos-tbody"
+           hx-select="#servicos-tbody"
+           hx-include="#filtros-servicos"
+           hx-swap="outerHTML"
+           hx-indicator="#servicos-loading"
+           hx-push-url="true"
+           hx-trigger="keyup changed delay:300ms">
+  </div>
+
+  <div class="col-md-2">
+    <label class="form-label mb-1">Status</label>
+    <select name="status" class="form-select"
+            hx-get="{% url 'cadastro:servicos' %}"
+            hx-target="#servicos-tbody"
+            hx-select="#servicos-tbody"
+            hx-include="#filtros-servicos"
+            hx-swap="outerHTML"
+            hx-indicator="#servicos-loading"
+            hx-push-url="true"
+            hx-trigger="change">
+      <option value="">Todos</option>
+      <option value="ativos" {% if filtros.status == 'ativos' %}selected{% endif %}>Ativos</option>
+      <option value="inativos" {% if filtros.status == 'inativos' %}selected{% endif %}>Inativos</option>
+    </select>
+  </div>
+
+  <div class="col-md-2">
+    <label class="form-label mb-1">Profissional</label>
+    <select name="prof" class="form-select"
+            hx-get="{% url 'cadastro:servicos' %}"
+            hx-target="#servicos-tbody"
+            hx-select="#servicos-tbody"
+            hx-include="#filtros-servicos"
+            hx-swap="outerHTML"
+            hx-indicator="#servicos-loading"
+            hx-push-url="true"
+            hx-trigger="change">
+      <option value="">Todos</option>
+      {% for p in profissionais %}
+        <option value="{{ p.id }}" {% if filtros.prof and p.id|stringformat:"s" == filtros.prof %}selected{% endif %}>{{ p.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="col-md-1">
+    <label class="form-label mb-1">Preço min</label>
+    <input type="number" step="0.01" name="preco_min" class="form-control"
+           value="{{ filtros.preco_min|default_if_none:'' }}"
+           hx-get="{% url 'cadastro:servicos' %}"
+           hx-target="#servicos-tbody"
+           hx-select="#servicos-tbody"
+           hx-include="#filtros-servicos"
+           hx-swap="outerHTML"
+           hx-indicator="#servicos-loading"
+           hx-push-url="true"
+           hx-trigger="change keyup delay:400ms">
+  </div>
+
+  <div class="col-md-1">
+    <label class="form-label mb-1">Preço máx</label>
+    <input type="number" step="0.01" name="preco_max" class="form-control"
+           value="{{ filtros.preco_max|default_if_none:'' }}"
+           hx-get="{% url 'cadastro:servicos' %}"
+           hx-target="#servicos-tbody"
+           hx-select="#servicos-tbody"
+           hx-include="#filtros-servicos"
+           hx-swap="outerHTML"
+           hx-indicator="#servicos-loading"
+           hx-push-url="true"
+           hx-trigger="change keyup delay:400ms">
+  </div>
+
+  <div class="col-md-1">
+    <label class="form-label mb-1">Duração min</label>
+    <input type="number" min="1" step="1" name="dur_min" class="form-control"
+           value="{{ filtros.dur_min|default_if_none:'' }}"
+           hx-get="{% url 'cadastro:servicos' %}"
+           hx-target="#servicos-tbody"
+           hx-select="#servicos-tbody"
+           hx-include="#filtros-servicos"
+           hx-swap="outerHTML"
+           hx-indicator="#servicos-loading"
+           hx-push-url="true"
+           hx-trigger="change keyup delay:400ms">
+  </div>
+
+  <div class="col-md-1">
+    <label class="form-label mb-1">Duração máx</label>
+    <input type="number" min="1" step="1" name="dur_max" class="form-control"
+           value="{{ filtros.dur_max|default_if_none:'' }}"
+           hx-get="{% url 'cadastro:servicos' %}"
+           hx-target="#servicos-tbody"
+           hx-select="#servicos-tbody"
+           hx-include="#filtros-servicos"
+           hx-swap="outerHTML"
+           hx-indicator="#servicos-loading"
+           hx-push-url="true"
+           hx-trigger="change keyup delay:400ms">
+  </div>
+</form>
+
+{# ------------------- TABELA ------------------- #}
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Serviço</th>
+        <th>Valor</th>
+        <th>Duração</th>
+        <th>Loja</th>
+        <th>Status</th>
+        <th>Funcionários</th>
+      </tr>
+    </thead>
+
+    {# tbody vem do partial #}
+    {% include 'cadastro/partials/servicos.html' %}
+  </table>
 </div>
 
-<div id="servicos-loading" class="mt-2" style="display:none;">Carregando...</div>
+{# indicador global usado por hx-indicator (evita “no matches”) #}
+<div id="servicos-loading" class="htmx-indicator mt-2">Carregando...</div>
+
+{# ------------------- MODAL: NOVO SERVIÇO ------------------- #}
+<div class="modal fade" id="modalServico" tabindex="-1" aria-labelledby="modalServicoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalServicoLabel">Novo serviço</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+
+      <div class="modal-body" id="modal-servico-body">
+        {# Form dentro do modal (POST via HTMX, fecha modal ao sucesso) #}
+        <form method="post"
+              hx-post="{% url 'cadastro:servicos' %}"
+              hx-target="#servicos-tbody"
+              hx-select="#servicos-tbody"
+              hx-include="#filtros-servicos"
+              hx-swap="outerHTML"
+              hx-indicator="#servicos-loading"
+              hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalServico')).hide(); } catch(e) {} }">
+          {% csrf_token %}
+          {{ form.as_p }}
+
+          {% if form and form.errors %}
+            <div class="alert alert-danger">
+              <strong>Erros no formulário:</strong>
+              <ul class="mb-0">
+                {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                {% for field in form %}
+                  {% for e in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ e }}</li>
+                  {% endfor %}
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 {% endblock %}
