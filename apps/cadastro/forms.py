@@ -62,11 +62,13 @@ class ServicoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["loja"].queryset = lojas
 
-        loja_id = self.data.get("loja") or self.initial.get("loja")
+        loja_valor = self.data.get("loja") or self.initial.get("loja")
         loja_obj = None
-        if loja_id:
+        if isinstance(loja_valor, Loja):
+            loja_obj = loja_valor
+        elif loja_valor:
             try:
-                loja_obj = lojas.get(id=int(loja_id))
+                loja_obj = lojas.get(id=int(loja_valor))
             except (ValueError, Loja.DoesNotExist):
                 loja_obj = None
         elif self.instance.pk:
