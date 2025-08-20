@@ -55,7 +55,8 @@ def owner_login(request):
 def owner_dashboard(request):
     sub = getattr(request.user, 'subscription', None)
     ctx = {'subscription': sub}
-    if request.headers.get('HX-Request'):
+    target = request.headers.get('HX-Target')
+    if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'accounts/partials/owner_dashboard.html', ctx)
     return render(request, 'accounts/owner_dashboard.html', ctx)
 
