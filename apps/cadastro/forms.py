@@ -1,4 +1,5 @@
 from django import forms
+from django.urls import reverse
 from .models import Loja, Funcionario, Servico
 
 class LojaForm(forms.ModelForm):
@@ -61,6 +62,14 @@ class ServicoForm(forms.ModelForm):
         lojas = kwargs.pop("lojas", Loja.objects.none())
         super().__init__(*args, **kwargs)
         self.fields["loja"].queryset = lojas
+        self.fields["loja"].widget.attrs.update({
+            "hx-get": reverse("cadastro:servico_form"),
+            "hx-target": "#modal-servico-body",
+            "hx-select": "#modal-servico-body",
+            "hx-include": "#form-servico",
+            "hx-trigger": "change",
+            "hx-swap": "outerHTML",
+        })
 
         loja_valor = self.data.get("loja") or self.initial.get("loja")
         loja_obj = None

@@ -227,3 +227,14 @@ def servicos(request):
     if request.headers.get('HX-Request'):
         return render(request, 'cadastro/partials/servicos.html', ctx)
     return render(request, 'cadastro/servicos.html', ctx)
+
+
+@login_required
+def servico_form(request):
+    """Recarrega o formulário de serviço para atualizar profissionais conforme a loja."""
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    lojas_qs = request.user.lojas.order_by('nome')
+    form = ServicoForm(request.GET or None, lojas=lojas_qs)
+    return render(request, 'cadastro/partials/servico_form.html', {'form': form})

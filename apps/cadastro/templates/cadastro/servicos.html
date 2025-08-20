@@ -166,39 +166,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
 
-      <div class="modal-body" id="modal-servico-body">
-        {# Form dentro do modal (POST via HTMX, fecha modal ao sucesso) #}
-        <form method="post"
-              hx-post="{% url 'cadastro:servicos' %}"
-              hx-target="#servicos-tbody"
-              hx-select="#servicos-tbody"
-              hx-include="#filtros-servicos"
-              hx-swap="outerHTML"
-              hx-indicator="#servicos-loading"
-              hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalServico')).hide(); } catch(e) {} }">
-          {% csrf_token %}
-          {{ form.as_p }}
-
-          {% if form and form.errors %}
-            <div class="alert alert-danger">
-              <strong>Erros no formulário:</strong>
-              <ul class="mb-0">
-                {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
-                {% for field in form %}
-                  {% for e in field.errors %}
-                    <li><strong>{{ field.label }}:</strong> {{ e }}</li>
-                  {% endfor %}
-                {% endfor %}
-              </ul>
-            </div>
-          {% endif %}
-
-          <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Salvar</button>
-          </div>
-        </form>
-      </div>
+      {% include 'cadastro/partials/servico_form.html' %}
 
     </div>
   </div>

@@ -7,6 +7,7 @@ app_name = 'cadastro'
 urlpatterns = [
     path('lojas/', views.owner_shops, name='owner_shops'),
     path('funcionarios/', views.funcionarios, name='funcionarios'),
+    path('servicos/form/', views.servico_form, name='servico_form'),
     path('servicos/', views.servicos, name='servicos'),
     path('<slug:slug>/', client_start_loja, name='client_start_loja'),
 ]
