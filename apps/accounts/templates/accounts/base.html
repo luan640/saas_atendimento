@@ -13,16 +13,16 @@
     <h4 class="text-white">Barber SaaS</h4>
     <ul class="nav nav-pills flex-column">
       <li class="nav-item">
-        <a class="nav-link text-white" hx-get="{% url 'accounts:owner_dashboard' %}" hx-target="#content" hx-push-url="true">Dashboard</a>
+        <a class="nav-link text-white" href="{% url 'accounts:owner_dashboard' %}">Dashboard</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link text-white" hx-get="{% url 'cadastro:owner_shops' %}" hx-target="#content" hx-push-url="true">Lojas</a>
+        <a class="nav-link text-white" href="{% url 'cadastro:owner_shops' %}">Lojas</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link text-white" hx-get="{% url 'cadastro:funcionarios' %}" hx-target="#content" hx-push-url="true">Funcionários</a>
+        <a class="nav-link text-white" href="{% url 'cadastro:funcionarios' %}">Funcionários</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link text-white" hx-get="{% url 'cadastro:servicos' %}" hx-target="#content" hx-push-url="true">Serviços</a>
+        <a class="nav-link text-white" href="{% url 'cadastro:servicos' %}">Serviços</a>
       </li>
     </ul>
   </nav>
@@ -33,5 +33,6 @@
     {% block content %}{% endblock %}
   </main>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

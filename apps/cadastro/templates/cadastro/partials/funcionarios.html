@@ -1,84 +1,16 @@
-<div class="row">
-  <div class="col-12">
-    <form class="mb-3 d-flex gap-2"
-          method="get"
-          hx-get="{% url 'cadastro:funcionarios' %}"
-          hx-target="#funcionarios-tbody"
-          hx-select="#funcionarios-tbody"
-          hx-swap="outerHTML"
-          hx-indicator="#funcionarios-loading"
-          hx-push-url="false">
-      <label class="form-label m-0 align-self-center">Loja:</label>
-      <select name="loja" class="form-select"
-          hx-get="{% url 'cadastro:funcionarios' %}"
-          hx-target="#funcionarios-tbody"
-          hx-select="#funcionarios-tbody"
-          hx-swap="outerHTML"
-          hx-indicator="#funcionarios-loading"
-          hx-push-url="false"
-          hx-trigger="change delay:150ms">
-        {% for l in lojas %}
-          <option value="{{ l.id }}" {% if loja and l.id == loja.id %}selected{% endif %}>
-            {{ l.nome }}
-          </option>
-        {% endfor %}
-      </select>
-      <noscript><button class="btn btn-outline-secondary">Trocar</button></noscript>
-    </form>
-  </div>
-</div>
-
-{% if not loja %}
-  <div class="alert alert-warning">Você ainda não possui lojas. Crie uma para cadastrar funcionários.</div>
-{% else %}
-<div class="row">
-  <div class="col-md-5">
-    <h4 class="mb-3">Novo funcionário</h4>
-
-    {% if messages %}
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
-
-    {# POST ainda atualiza o fragmento inteiro, para limpar o form #}
-    <form method="post"
-          hx-post="{% url 'cadastro:funcionarios' %}"
-          hx-target="#funcionarios-fragment"
-          hx-swap="innerHTML"
-          hx-indicator="#funcionarios-loading">
-      {% csrf_token %}
-      <input type="hidden" name="loja" value="{{ loja.id }}">
-      {{ form.as_p }}
-      <button class="btn btn-primary w-100" type="submit">Salvar</button>
-    </form>
-  </div>
-
-  <div class="col-md-7">
-    <h4 class="mb-3">Lista</h4>
-    <table class="table table-striped align-middle">
-      <thead>
-        <tr>
-          <th>Nome</th><th>Cargo</th><th>E-mail</th><th>Telefone</th><th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="funcionarios-tbody">
-        {% for f in funcionarios %}
-        <tr>
-          <td>{{ f.nome }}</td>
-          <td>{{ f.get_cargo_display }}</td>
-          <td>{{ f.email|default:"—" }}</td>
-          <td>{{ f.telefone|default:"—" }}</td>
-          <td>
-            {% if f.ativo %}<span class="badge bg-success">Ativo</span>
-            {% else %}<span class="badge bg-secondary">Inativo</span>{% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5" class="text-muted">Nenhum funcionário ainda.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endif %}
+<tbody id="funcionarios-tbody">
+  {% for f in funcionarios %}
+  <tr>
+    <td>{{ f.nome }}</td>
+    <td>{{ f.get_cargo_display }}</td>
+    <td>{{ f.email|default:"—" }}</td>
+    <td>{{ f.telefone|default:"—" }}</td>
+    <td>
+      {% if f.ativo %}<span class="badge bg-success">Ativo</span>
+      {% else %}<span class="badge bg-secondary">Inativo</span>{% endif %}
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="5" class="text-muted">Nenhum funcionário ainda.</td></tr>
+  {% endfor %}
+</tbody>

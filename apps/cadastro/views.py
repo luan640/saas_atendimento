@@ -114,9 +114,10 @@ def funcionarios(request):
 
     # Sem lojas ainda? oriente o dono a criar
     if not loja:
-        ctx = {'lojas': lojas_qs, 'loja': None, 'form': None, 'funcionarios': []}
-        tpl = 'cadastro/partials/funcionarios.html' if request.headers.get('HX-Request') else 'cadastro/funcionarios.html'
-        return render(request, tpl, ctx)
+        ctx = {'lojas': lojas_qs, 'loja': None, 'form': FuncionarioForm(), 'funcionarios': []}
+        if request.headers.get('HX-Request'):
+            return render(request, 'cadastro/partials/funcionarios.html', ctx)
+        return render(request, 'cadastro/funcionarios.html', ctx)
 
     if request.method == 'POST':
         form = FuncionarioForm(request.POST)
@@ -135,8 +136,9 @@ def funcionarios(request):
         # inválido
         qs = loja.funcionarios.order_by('nome')
         ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'funcionarios': qs}
-        tpl = 'cadastro/partials/funcionarios.html' if request.headers.get('HX-Request') else 'cadastro/funcionarios.html'
-        return render(request, tpl, ctx, status=422)
+        if request.headers.get('HX-Request'):
+            return render(request, 'cadastro/partials/funcionarios.html', ctx, status=422)
+        return render(request, 'cadastro/funcionarios.html', ctx, status=422)
 
     # GET
     form = FuncionarioForm()
