@@ -11,7 +11,7 @@
 
 <form id="filtros-func" class="mb-3 d-flex gap-2">
   <label class="form-label m-0 align-self-center">Loja:</label>
-  <select name="loja" class="form-select"
+  <select name="loja_filtro" class="form-select"
           hx-get="{% url 'cadastro:funcionarios' %}"
           hx-target="#funcionarios-tbody"
           hx-select="#funcionarios-tbody"

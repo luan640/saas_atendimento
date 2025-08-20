@@ -7,15 +7,18 @@ class LojaForm(forms.ModelForm):
         fields = ['nome', 'telefone', 'endereco', 'ativa']
 
 class FuncionarioForm(forms.ModelForm):
+    loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
+
     class Meta:
         model = Funcionario
-        fields = ["nome", "cargo", "email", "telefone", "ativo"]
+        fields = ["loja", "nome", "cargo", "email", "telefone", "ativo"]
         labels = {
             "nome": "Nome",
             "cargo": "Cargo",
             "email": "E-mail",
             "telefone": "Telefone",
             "ativo": "Ativo?",
+            "loja": "Loja",
         }
         widgets = {
             "nome": forms.TextInput(attrs={"placeholder": "Ex.: Pedro Alves"}),
@@ -23,8 +26,14 @@ class FuncionarioForm(forms.ModelForm):
             "telefone": forms.TextInput(attrs={"placeholder": "+5585..."}),
         }
 
+    def __init__(self, *args, **kwargs):
+        lojas = kwargs.pop("lojas", Loja.objects.none())
+        super().__init__(*args, **kwargs)
+        self.fields["loja"].queryset = lojas
+
 
 class ServicoForm(forms.ModelForm):
+    loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
     profissionais = forms.ModelMultipleChoiceField(
         queryset=Funcionario.objects.none(),
         required=False,
@@ -34,7 +43,7 @@ class ServicoForm(forms.ModelForm):
 
     class Meta:
         model = Servico
-        fields = ["nome", "descricao", "duracao_minutos", "preco", "profissionais", "ativo"]
+        fields = ["loja", "nome", "descricao", "duracao_minutos", "preco", "profissionais", "ativo"]
         labels = {
             "nome": "Nome do serviço",
             "descricao": "Descrição",
@@ -42,15 +51,28 @@ class ServicoForm(forms.ModelForm):
             "preco": "Preço (R$)",
             "profissionais": "Profissionais",
             "ativo": "Ativo?",
+            "loja": "Loja",
         }
         widgets = {
             "descricao": forms.Textarea(attrs={"rows": 3}),
         }
 
     def __init__(self, *args, **kwargs):
-        self.loja = kwargs.pop("loja", None)
+        lojas = kwargs.pop("lojas", Loja.objects.none())
         super().__init__(*args, **kwargs)
-        if self.loja is not None:
-            self.fields["profissionais"].queryset = self.loja.funcionarios.filter(ativo=True).order_by("nome")
+        self.fields["loja"].queryset = lojas
+
+        loja_id = self.data.get("loja") or self.initial.get("loja")
+        loja_obj = None
+        if loja_id:
+            try:
+                loja_obj = lojas.get(id=int(loja_id))
+            except (ValueError, Loja.DoesNotExist):
+                loja_obj = None
+        elif self.instance.pk:
+            loja_obj = self.instance.loja
+
+        if loja_obj is not None:
+            self.fields["profissionais"].queryset = loja_obj.funcionarios.filter(ativo=True).order_by("nome")
         else:
             self.fields["profissionais"].queryset = Funcionario.objects.none()

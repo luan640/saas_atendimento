@@ -14,7 +14,7 @@
 <form id="filtros-servicos" class="row g-2 mb-3">
   <div class="col-md-3">
     <label class="form-label mb-1">Loja</label>
-    <select name="loja" class="form-select"
+    <select name="loja_filtro" class="form-select"
             hx-get="{% url 'cadastro:servicos' %}"
             hx-target="#servicos-tbody"
             hx-select="#servicos-tbody"

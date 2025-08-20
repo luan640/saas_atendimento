@@ -8,7 +8,8 @@ from .forms import LojaForm, FuncionarioForm, ServicoForm
 
 def _get_loja_ativa(request, lojas_qs):
     """Obtém a loja selecionada pelo usuário via GET/POST; fallback = primeira do queryset."""
-    loja_id = request.GET.get('loja') or request.POST.get('loja')
+    data = request.GET if request.method == 'GET' else request.POST
+    loja_id = data.get('loja_filtro') or data.get('loja')
     loja = None
     if loja_id:
         try:
@@ -114,25 +115,28 @@ def funcionarios(request):
 
     # Sem lojas ainda? oriente o dono a criar
     if not loja:
-        ctx = {'lojas': lojas_qs, 'loja': None, 'form': FuncionarioForm(), 'funcionarios': []}
+        ctx = {
+            'lojas': lojas_qs,
+            'loja': None,
+            'form': FuncionarioForm(lojas=lojas_qs),
+            'funcionarios': []
+        }
         if request.headers.get('HX-Request'):
             return render(request, 'cadastro/partials/funcionarios.html', ctx)
         return render(request, 'cadastro/funcionarios.html', ctx)
 
     if request.method == 'POST':
-        form = FuncionarioForm(request.POST)
+        form = FuncionarioForm(request.POST, lojas=lojas_qs)
         if form.is_valid():
-            obj = form.save(commit=False)
-            obj.loja = loja
-            obj.save()
+            obj = form.save()
             messages.success(request, 'Funcionário salvo!')
             # reconsulta lista e limpa form
             qs = loja.funcionarios.order_by('nome')
-            form = FuncionarioForm()
+            form = FuncionarioForm(lojas=lojas_qs, initial={'loja': loja})
             ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'funcionarios': qs}
             if request.headers.get('HX-Request'):
                 return render(request, 'cadastro/partials/funcionarios.html', ctx)
-            return redirect(f"{request.path}?loja={loja.id}")
+            return redirect(f"{request.path}?loja_filtro={loja.id}")
         # inválido
         qs = loja.funcionarios.order_by('nome')
         ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'funcionarios': qs}
@@ -141,7 +145,7 @@ def funcionarios(request):
         return render(request, 'cadastro/funcionarios.html', ctx, status=422)
 
     # GET
-    form = FuncionarioForm()
+    form = FuncionarioForm(lojas=lojas_qs, initial={'loja': loja})
     qs = loja.funcionarios.order_by('nome')
     ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'funcionarios': qs}
     if request.headers.get('HX-Request'):
@@ -155,8 +159,9 @@ def servicos(request):
 
     lojas_qs = request.user.lojas.order_by('nome')
 
-    # loja selecionada (mantém sua lógica existente)
-    loja_id = request.GET.get('loja') or request.POST.get('loja')
+    # loja selecionada para filtragem da lista
+    loja_id = (request.GET.get('loja_filtro') or request.POST.get('loja_filtro') or
+               request.GET.get('loja') or request.POST.get('loja'))
     loja = None
     if loja_id:
         try:
@@ -175,41 +180,48 @@ def servicos(request):
     filtros = _parse_filtros(request)
 
     if request.method == 'POST':
-        form = ServicoForm(request.POST, loja=loja)
+        form = ServicoForm(request.POST, lojas=lojas_qs)
         if form.is_valid():
-            obj = form.save(commit=False)
-            obj.loja = loja
-            obj.save()
+            obj = form.save()
             form.save_m2m()
             messages.success(request, 'Serviço salvo!')
             # depois de salvar, recarrega a lista já com filtros
             qs = _aplica_filtros(loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'), filtros)
             ctx = {
-                'lojas': lojas_qs, 'loja': loja, 'form': ServicoForm(loja=loja),
-                'servicos': qs, 'filtros': filtros,
+                'lojas': lojas_qs,
+                'loja': loja,
+                'form': ServicoForm(lojas=lojas_qs, initial={'loja': loja}),
+                'servicos': qs,
+                'filtros': filtros,
                 'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
             }
             if request.headers.get('HX-Request'):
                 # devolve só o tbody; a modal fecha via hx-on no template
                 return render(request, 'cadastro/partials/servicos.html', ctx)
-            return redirect(f"{request.path}?loja={loja.id}")
+            return redirect(f"{request.path}?loja_filtro={loja.id}")
         else:
             # form inválido: renderiza página completa (não-HTMX) ou tbody (HTMX) sem quebrar o alvo
             qs = _aplica_filtros(loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'), filtros)
             ctx = {
-                'lojas': lojas_qs, 'loja': loja, 'form': form,
-                'servicos': qs, 'filtros': filtros,
+                'lojas': lojas_qs,
+                'loja': loja,
+                'form': form,
+                'servicos': qs,
+                'filtros': filtros,
                 'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
             }
             tpl = 'cadastro/partials/servicos.html' if request.headers.get('HX-Request') else 'cadastro/servicos.html'
             return render(request, tpl, ctx, status=422)
 
     # GET (lista com filtros)
-    form = ServicoForm(loja=loja)
+    form = ServicoForm(lojas=lojas_qs, initial={'loja': loja})
     qs = _aplica_filtros(loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'), filtros)
     ctx = {
-        'lojas': lojas_qs, 'loja': loja, 'form': form,
-        'servicos': qs, 'filtros': filtros,
+        'lojas': lojas_qs,
+        'loja': loja,
+        'form': form,
+        'servicos': qs,
+        'filtros': filtros,
         'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
     }
     if request.headers.get('HX-Request'):
