@@ -98,11 +98,12 @@ def owner_shops(request):
             # Form inválido → se for HTMX, devolve parcial com erros
             if request.headers.get('HX-Request') and target != 'content':
                 lojas = request.user.lojas.all().order_by('-criada_em')
-                resp = render(request, 'cadastro/partials/owner_shops.html',
-                            {'form': form, 'lojas': lojas}, status=422)
-                resp['HX-Retarget'] = '#shops-fragment'
-                resp['HX-Reswap'] = 'innerHTML'
-                return resp
+                # status 200 para evitar erro 422 no console do HTMX
+                return render(
+                    request,
+                    'cadastro/partials/owner_shops.html',
+                    {'form': form, 'lojas': lojas},
+                )
 
     # GET
     form = LojaForm(user=request.user)
@@ -152,8 +153,13 @@ def funcionarios(request):
         qs = loja.funcionarios.order_by('nome')
         ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'funcionarios': qs}
         if request.headers.get('HX-Request') and target != 'content':
-            return render(request, 'cadastro/partials/funcionarios.html', ctx, status=422)
-        return render(request, 'cadastro/funcionarios.html', ctx, status=422)
+            # Retorna o corpo do modal com os erros de validação
+            resp = render(request, 'cadastro/funcionarios.html', ctx)
+            resp['HX-Retarget'] = '#modal-funcionario-body'
+            resp['HX-Reselect'] = '#modal-funcionario-body'
+            resp['HX-Reswap'] = 'outerHTML'
+            return resp
+        return render(request, 'cadastro/funcionarios.html', ctx)
 
     # GET
     form = FuncionarioForm(lojas=lojas_qs, initial={'loja': loja})
