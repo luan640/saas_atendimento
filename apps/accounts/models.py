@@ -72,6 +72,15 @@ class Subscription(models.Model):
     def __str__(self):
         return f"{self.owner.email} – {self.plan} até {self.end_date:%d/%m/%Y}"
 
+class PlanInfo(models.Model):
+    plan = models.CharField(max_length=20, choices=Plan.choices, unique=True)
+
+    max_funcionarios = models.PositiveIntegerField(default=1, help_text="Quantidade máxima de funcionários permitidos.")
+    max_lojas = models.PositiveIntegerField(default=1, help_text="Quantidade máxima de lojas permitidas.")
+
+    def __str__(self):
+        return f"Limites do plano {self.get_plan_display()}"
+
 class ClientOTP(models.Model):
     """Códigos de verificação para login via telefone (cliente)."""
     phone = models.CharField(max_length=17)
@@ -84,3 +93,4 @@ class ClientOTP(models.Model):
 
     def __str__(self):
         return f"OTP {self.phone} expira {self.expires_at:%H:%M:%S}"
+

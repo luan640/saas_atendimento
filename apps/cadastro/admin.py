@@ -13,3 +13,4 @@ class ServicoAdmin(admin.ModelAdmin):
     list_filter = ("ativo", "loja")
     search_fields = ("nome", "slug", "descricao", "loja__nome")
     filter_horizontal = ("profissionais",)
+

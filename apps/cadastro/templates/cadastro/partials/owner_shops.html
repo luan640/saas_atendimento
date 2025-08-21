@@ -2,11 +2,20 @@
   <div class="col-md-5">
     <h4 class="mb-3">Nova loja</h4>
 
-    {# mensagens de sucesso/erro #}
+    {# mensagens de sucesso/erro via messages framework #}
     {% if messages %}
       {% for message in messages %}
         <div class="alert alert-{{ message.tags }}">{{ message }}</div>
       {% endfor %}
+    {% endif %}
+
+    {# ✅ MOSTRA non_field_errors (ex.: limite do plano) #}
+    {% if form and form.non_field_errors %}
+      <div class="alert alert-danger">
+        <ul class="mb-0">
+          {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+        </ul>
+      </div>
     {% endif %}
 
     <form
@@ -18,6 +27,20 @@
     >
       {% csrf_token %}
       {{ form.as_p }}
+
+      {# (Opcional) resumo de erros de campo, se quiser enfatizar #}
+      {% if form and form.errors %}
+        <div class="alert alert-danger mt-2">
+          <ul class="mb-0">
+            {% for field in form %}
+              {% for e in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ e }}</li>
+              {% endfor %}
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
       <button class="btn btn-primary w-100" type="submit">Criar loja</button>
     </form>
   </div>

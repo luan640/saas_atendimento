@@ -1,11 +1,53 @@
 from django import forms
 from django.urls import reverse
 from .models import Loja, Funcionario, Servico
+from apps.accounts.models import PlanInfo
+
 
 class LojaForm(forms.ModelForm):
     class Meta:
         model = Loja
         fields = ['nome', 'telefone', 'endereco', 'ativa']
+
+    def __init__(self, *args, **kwargs):
+        # 👇 receba o usuário que está criando
+        self.user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned = super().clean()
+
+        # Só checa em criação (não em edição)
+        if not self.instance.pk:
+            user = self.user or getattr(self.instance, 'owner', None)
+            if user:
+                # plano atual (se não houver subscription, trate como FREE)
+                sub = getattr(user, 'subscription', None)
+                plan_key = sub.plan if sub else Plan.FREE
+
+                # carrega limites; se não houver registro, aplica fallback seguro
+                try:
+                    limites = PlanInfo.objects.get(plan=plan_key)
+                except PlanInfo.DoesNotExist:
+                    # defaults: 1 loja / 1 funcionário
+                    class _Default: 
+                        max_lojas = 1
+                        max_funcionarios = 1
+                    limites = _Default()
+
+                # quer contar só ativas? use: user.lojas.filter(ativa=True).count()
+                qtd_lojas = user.lojas.count()
+                if qtd_lojas >= limites.max_lojas:
+                    # nome bonitinho do plano
+                    try:
+                        plano_label = Plan(plan_key).label
+                    except Exception:
+                        plano_label = str(plan_key)
+                    raise forms.ValidationError(
+                        f"Seu plano atual ({plano_label}) permite no máximo {limites.max_lojas} loja(s)."
+                    )
+
+        return cleaned
 
 class FuncionarioForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
@@ -32,6 +74,23 @@ class FuncionarioForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields["loja"].queryset = lojas
 
+    def clean(self):
+        cleaned_data = super().clean()
+
+        loja = cleaned_data.get("loja")
+        if not self.instance.pk and loja:
+            owner = loja.owner
+            if hasattr(owner, "subscription"):
+                plano_atual = owner.subscription.plan
+                limites = PlanInfo.objects.get(plan=plano_atual)
+
+                qtd_funcionarios = loja.funcionarios.count()
+                if qtd_funcionarios >= limites.max_funcionarios:
+                    raise forms.ValidationError(
+                        f"O plano atual permite no máximo {limites.max_funcionarios} funcionário(s) por loja."
+                    )
+
+        return cleaned_data
 
 class ServicoForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")

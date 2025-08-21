@@ -66,6 +66,7 @@ def _aplica_filtros(qs, filtros):
             pass
     return qs.distinct()
 
+
 @login_required
 def owner_shops(request):
     if not getattr(request.user, 'is_owner', False):
@@ -73,7 +74,7 @@ def owner_shops(request):
 
     target = request.headers.get('HX-Target')
     if request.method == 'POST':
-        form = LojaForm(request.POST)
+        form = LojaForm(request.POST, user=request.user)
         if form.is_valid():
             loja = form.save(commit=False)
             loja.owner = request.user
@@ -85,7 +86,7 @@ def owner_shops(request):
 
             if request.headers.get('HX-Request') and target != 'content':
                 # Limpa o form e devolve o parcial atualizado
-                form = LojaForm()
+                form = LojaForm(user=request.user)
                 return render(request, 'cadastro/partials/owner_shops.html',
                               {'form': form, 'lojas': lojas})
 
@@ -94,11 +95,14 @@ def owner_shops(request):
             # Form inválido → se for HTMX, devolve parcial com erros
             if request.headers.get('HX-Request') and target != 'content':
                 lojas = request.user.lojas.all().order_by('-criada_em')
-                return render(request, 'cadastro/partials/owner_shops.html',
-                              {'form': form, 'lojas': lojas}, status=422)
+                resp = render(request, 'cadastro/partials/owner_shops.html',
+                            {'form': form, 'lojas': lojas}, status=422)
+                resp['HX-Retarget'] = '#shops-fragment'
+                resp['HX-Reswap'] = 'innerHTML'
+                return resp
 
     # GET
-    form = LojaForm()
+    form = LojaForm(user=request.user)
     lojas = request.user.lojas.all().order_by('-criada_em')
 
     if request.headers.get('HX-Request') and target != 'content':
@@ -232,7 +236,6 @@ def servicos(request):
     if request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content':
         return render(request, 'cadastro/partials/servicos.html', ctx)
     return render(request, 'cadastro/servicos.html', ctx)
-
 
 @login_required
 def servico_form(request):
