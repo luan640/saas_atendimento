@@ -92,9 +92,6 @@ def owner_shops(request):
 
             return redirect('cadastro:owner_shops')
         else:
-            # adiciona mensagens de erro (ex.: limite do plano)
-            for err in form.non_field_errors():
-                messages.error(request, err)
             # Form inválido → se for HTMX, devolve parcial com erros
             if request.headers.get('HX-Request') and target != 'content':
                 lojas = request.user.lojas.all().order_by('-criada_em')
@@ -147,9 +144,7 @@ def funcionarios(request):
             if request.headers.get('HX-Request') and target != 'content':
                 return render(request, 'cadastro/partials/funcionarios.html', ctx)
             return redirect(f"{request.path}?loja_filtro={loja.id}")
-        # inválido
-        for err in form.non_field_errors():
-            messages.error(request, err)
+
         qs = loja.funcionarios.order_by('nome')
         ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'funcionarios': qs}
         if request.headers.get('HX-Request') and target != 'content':

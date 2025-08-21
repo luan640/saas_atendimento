@@ -10,7 +10,7 @@ class LojaForm(forms.ModelForm):
         fields = ['nome', 'telefone', 'endereco', 'ativa']
 
     def __init__(self, *args, **kwargs):
-        # 👇 receba o usuário que está criando
+        # receba o usuário que está criando
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
 
