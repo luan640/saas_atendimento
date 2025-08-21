@@ -1,7 +1,7 @@
 from django import forms
 from django.urls import reverse
 from .models import Loja, Funcionario, Servico
-from apps.accounts.models import PlanInfo
+from apps.accounts.models import Plan, PlanInfo
 
 
 class LojaForm(forms.ModelForm):
