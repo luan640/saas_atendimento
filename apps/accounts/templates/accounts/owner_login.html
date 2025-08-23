@@ -1,4 +1,4 @@
-{% extends 'accounts/base.html' %}
+{% extends 'accounts/base_public.html' %}
 {% block title %}Login do Dono{% endblock %}
 
 {% block content %}
@@ -7,10 +7,12 @@
 </div>
 
 <div id="owner-login">
-  {# Renderizamos o fragmento aqui para evitar duplicação #}
+  {# Renderiza o fragmento inicial, que será atualizado pelo HTMX #}
   {% include 'accounts/partials/owner_login.html' %}
 </div>
 
-{# Indicador opcional (aparece durante requests HTMX se usar hx-indicator) #}
-<div id="login-loading" style="display:none;">Carregando...</div>
+{# Indicador global opcional para requests HTMX #}
+<div id="login-loading" class="htmx-indicator mt-2" style="display:none;">
+  Carregando...
+</div>
 {% endblock %}

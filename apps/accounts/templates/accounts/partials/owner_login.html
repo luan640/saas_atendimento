@@ -15,6 +15,12 @@
     >
       {% csrf_token %}
       {{ form.as_p }}
+
+      {# 👇 preserva o parâmetro next no POST #}
+      {% if request.GET.next %}
+        <input type="hidden" name="next" value="{{ request.GET.next }}">
+      {% endif %}
+
       <button class="btn btn-primary w-100" type="submit">Entrar</button>
     </form>
 

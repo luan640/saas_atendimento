@@ -33,13 +33,16 @@ def owner_login(request):
 
             login(request, user)
 
-            # Se veio via HTMX, redireciona a página toda:
+            # pega o next da querystring ou do form hidden
+            next_url = request.POST.get('next') or request.GET.get('next')
+
+            # Se veio via HTMX, devolve HX-Redirect para a URL certa
             if request.headers.get('HX-Request'):
-                resp = HttpResponse(status=204)  # No Content
-                resp['HX-Redirect'] = reverse('accounts:owner_dashboard')
+                resp = HttpResponse(status=204)
+                resp['HX-Redirect'] = next_url or reverse('accounts:owner_dashboard')
                 return resp
 
-            return redirect('accounts:owner_dashboard')
+            return redirect(next_url or 'accounts:owner_dashboard')
 
         # Form inválido
         template = 'accounts/partials/owner_login.html' if request.headers.get('HX-Request') \
@@ -47,9 +50,10 @@ def owner_login(request):
         return render(request, template, {'form': form}, status=422)
 
     # GET
+    context = {'form': form}
     if request.headers.get('HX-Request'):
-        return render(request, 'accounts/partials/owner_login.html', {'form': form})
-    return render(request, 'accounts/owner_login.html', {'form': form})
+        return render(request, 'accounts/partials/owner_login.html', context)
+    return render(request, 'accounts/owner_login.html', context)
 
 @login_required
 def owner_dashboard(request):
