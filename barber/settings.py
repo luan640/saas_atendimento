@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
+    'apps.accounts.middleware.LoginRequiredMiddleware',
     'apps.accounts.middleware.SubscriptionRequiredMiddleware',
 
 ]
