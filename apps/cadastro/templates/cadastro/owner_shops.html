@@ -2,11 +2,55 @@
 {% block title %}Minhas Lojas{% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">Minhas Lojas</h3>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalLoja">
+    Nova loja
+  </button>
+</div>
+
 <div id="shops-fragment">
-  {# evita duplicação: só inclui o parcial #}
+  {# inclui o parcial só da tabela #}
   {% include 'cadastro/partials/owner_shops.html' %}
 </div>
 
-{# indicador opcional para HTMX #}
-<div id="shops-loading" class="mt-2" style="display:none;">Carregando...</div>
+<div id="shops-loading" class="htmx-indicator mt-2" style="display:none;">Carregando...</div>
+
+{# modal para criar loja #}
+<div class="modal fade" id="modalLoja" tabindex="-1" aria-labelledby="modalLojaLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalLojaLabel">Nova Loja</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="modal-loja-body">
+        <form
+          method="post"
+          hx-post="{% url 'cadastro:owner_shops' %}"
+          hx-target="#shops-fragment"
+          hx-swap="innerHTML"
+          hx-indicator="#shops-loading"
+          hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalLoja')).hide(); } catch(e) {} }"
+        >
+          {% csrf_token %}
+          {{ form.as_p }}
+
+          {% if form and form.non_field_errors %}
+            <div class="alert alert-danger">
+              <ul class="mb-0">
+                {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

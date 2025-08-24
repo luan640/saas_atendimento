@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 
     'apps.accounts',
     'apps.cadastro',
+    'apps.appointments',
 
 ]
 
@@ -51,8 +52,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
-    'apps.accounts.middleware.SubscriptionRequiredMiddleware',
 
 ]
 

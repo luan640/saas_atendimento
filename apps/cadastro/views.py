@@ -5,6 +5,9 @@ from django.urls import reverse
 
 from .models import Loja
 from .forms import LojaForm, FuncionarioForm, ServicoForm
+from apps.accounts.decorators import subscription_required
+
+# ========== UTILITÁRIAS ==========
 
 def _get_loja_ativa(request, lojas_qs):
     """Obtém a loja selecionada pelo usuário via GET/POST; fallback = primeira do queryset."""
@@ -66,8 +69,10 @@ def _aplica_filtros(qs, filtros):
             pass
     return qs.distinct()
 
+# ========== SHOPS ==========
 
 @login_required
+@subscription_required
 def owner_shops(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
@@ -111,7 +116,10 @@ def owner_shops(request):
 
     return render(request, 'cadastro/owner_shops.html', {'form': form, 'lojas': lojas})
 
+# ========== FUNCIONÁRIOS ==========
+
 @login_required
+@subscription_required
 def funcionarios(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
@@ -164,7 +172,10 @@ def funcionarios(request):
         return render(request, 'cadastro/partials/funcionarios.html', ctx)
     return render(request, 'cadastro/funcionarios.html', ctx)
 
+# ========== SERVIÇOS ==========
+
 @login_required
+@subscription_required
 def servicos(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
@@ -226,6 +237,7 @@ def servicos(request):
                 'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
             }
             tpl = 'cadastro/partials/servicos.html' if (request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content') else 'cadastro/servicos.html'
+
             return render(request, tpl, ctx, status=422)
 
     # GET (lista com filtros)
@@ -244,6 +256,7 @@ def servicos(request):
     return render(request, 'cadastro/servicos.html', ctx)
 
 @login_required
+@subscription_required
 def servico_form(request):
     """Recarrega o formulário de serviço para atualizar profissionais conforme a loja."""
     if not getattr(request.user, 'is_owner', False):

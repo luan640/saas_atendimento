@@ -1,64 +1,26 @@
-<div class="row">
-  <div class="col-md-5">
-    <h4 class="mb-3">Nova loja</h4>
-
-    {# mensagens de sucesso/erro via messages framework #}
-    {% if messages %}
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Nome</th><th>Link público</th><th>Status</th></tr>
+    </thead>
+    <tbody id="lojas-tbody">
+      {% for loja in lojas %}
+      <tr>
+        <td>{{ loja.nome }}</td>
+        <td>
+          <a href="{{ loja.slug }}" target="_blank">{{ loja.slug }}</a>
+        </td>
+        <td>
+          {% if loja.ativa %}
+            <span class="badge bg-success">Ativa</span>
+          {% else %}
+            <span class="badge bg-secondary">Inativa</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" class="text-muted">Nenhuma loja ainda.</td></tr>
       {% endfor %}
-    {% endif %}
-
-    {# MOSTRA non_field_errors (ex.: limite do plano) #}
-    {% if form and form.non_field_errors %}
-      <div class="alert alert-danger">
-        <ul class="mb-0">
-          {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
-        </ul>
-      </div>
-    {% endif %}
-
-    <form
-      method="post"
-      hx-post="{% url 'cadastro:owner_shops' %}"
-      hx-target="#shops-fragment"
-      hx-swap="innerHTML"
-      hx-indicator="#shops-loading"
-    >
-      {% csrf_token %}
-      {{ form.as_p }}
-
-      <button class="btn btn-primary w-100" type="submit">Criar loja</button>
-    </form>
-  </div>
-
-  <div class="col-md-7">
-    <h4 class="mb-3">Lojas cadastradas</h4>
-    <table class="table table-striped">
-      <thead>
-        <tr><th>Nome</th><th>Link público</th><th>Status</th></tr>
-      </thead>
-      <tbody id="lojas-tbody">
-        {% for loja in lojas %}
-        <tr>
-          <td>{{ loja.nome }}</td>
-          <td>
-            <a href="{{ loja.slug }}" target="_blank">
-              {{ loja.slug }}
-            </a>
-          </td>
-          <td>
-            {% if loja.ativa %}
-              <span class="badge bg-success">Ativa</span>
-            {% else %}
-              <span class="badge bg-secondary">Inativa</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="3" class="text-muted">Nenhuma loja ainda.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    </tbody>
+  </table>
 </div>

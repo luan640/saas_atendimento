@@ -11,6 +11,7 @@ from django.http import HttpResponse
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
 from apps.cadastro.models import Loja
+from apps.accounts.decorators import subscription_required
 
 # ========== OWNER ==========
 
@@ -56,6 +57,7 @@ def owner_login(request):
     return render(request, 'accounts/owner_login.html', context)
 
 @login_required
+@subscription_required
 def owner_dashboard(request):
     sub = getattr(request.user, 'subscription', None)
     ctx = {'subscription': sub}
@@ -65,6 +67,7 @@ def owner_dashboard(request):
     return render(request, 'accounts/owner_dashboard.html', ctx)
 
 @login_required
+@subscription_required
 def owner_logout(request):
     logout(request)
     return redirect('accounts:owner_login')
