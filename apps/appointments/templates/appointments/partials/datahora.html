@@ -1,0 +1,18 @@
+<h3>Data e horário</h3>
+<p>{{ funcionario.nome }} –
+{% for s in servicos %}{{ s.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<form method="post" hx-post="{% url 'appointments:agendamento_datahora' %}" hx-target="#step-container">
+  {% csrf_token %}
+  <div class="mb-3">
+    {{ form.data.label_tag }} {{ form.data }}
+  </div>
+  <div class="mb-3">
+    {{ form.hora.label_tag }} {{ form.hora }}
+  </div>
+  <div class="d-flex justify-content-between">
+    <button type="button" class="btn btn-secondary"
+            hx-get="{% url 'appointments:agendamento_servicos' funcionario.id %}"
+            hx-target="#step-container" hx-push-url="true">Voltar</button>
+    <button type="submit" class="btn btn-primary">Confirmar</button>
+  </div>
+</form>

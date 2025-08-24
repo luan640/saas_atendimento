@@ -1,10 +1,6 @@
-{% extends "accounts/base_client.html" %}
-{% block title %}Agendamento Confirmado{% endblock %}
-{% block content %}
 <h3>Agendamento confirmado!</h3>
-<p><strong>Serviço:</strong> {{ agendamento.servico.nome }}</p>
 <p><strong>Profissional:</strong> {{ agendamento.funcionario.nome }}</p>
+<p><strong>Serviços:</strong> {% for s in agendamento.servicos.all %}{{ s.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
 <p><strong>Data:</strong> {{ agendamento.data }}</p>
 <p><strong>Hora:</strong> {{ agendamento.hora }}</p>
 <p class="mt-3"><a class="btn btn-success" href="{% url 'accounts:client_dashboard' %}">Voltar à área do cliente</a></p>
-{% endblock %}

@@ -1,0 +1,8 @@
+{% extends "accounts/base_client.html" %}
+{% block title %}Agendar{% endblock %}
+{% block content %}
+<div id="step-container" hx-get="{% url 'appointments:agendamento_profissionais' %}" hx-trigger="load" hx-push-url="true"></div>
+{% endblock %}
+{% block extra_js %}
+<script src="https://unpkg.com/htmx.org@1.9.8"></script>
+{% endblock %}

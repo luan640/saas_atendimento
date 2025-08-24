@@ -9,7 +9,7 @@ class Agendamento(models.Model):
     )
     loja = models.ForeignKey("cadastro.Loja", on_delete=models.CASCADE, related_name="agendamentos")
     funcionario = models.ForeignKey("cadastro.Funcionario", on_delete=models.CASCADE, related_name="agendamentos")
-    servico = models.ForeignKey("cadastro.Servico", on_delete=models.CASCADE, related_name="agendamentos")
+    servicos = models.ManyToManyField("cadastro.Servico", related_name="agendamentos")
 
     data = models.DateField()
     hora = models.TimeField()
@@ -18,4 +18,7 @@ class Agendamento(models.Model):
     confirmado = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.cliente.full_name} – {self.servico.nome} ({self.data} {self.hora:%H:%M})"
+        nomes = ", ".join(s.nome for s in self.servicos.all()[:3])
+        if self.servicos.count() > 3:
+            nomes += "..."
+        return f"{self.cliente.full_name} – {nomes} ({self.data} {self.hora:%H:%M})"
