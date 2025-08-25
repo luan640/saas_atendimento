@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
 from django.core.validators import RegexValidator
+from django.utils.text import slugify
 
 class UserManager(BaseUserManager):
     use_in_migrations = True
@@ -34,7 +35,9 @@ class UserManager(BaseUserManager):
         return self._create_user(email, password, **extra_fields)
 
 class User(AbstractUser):
-    username = None  # não usar username
+    nome = models.CharField(max_length=120, blank=True, null=True)
+    sobrenome = models.CharField(max_length=120, blank=True, null=True)
+    grupo = models.SlugField(max_length=150, unique=True, blank=True)  # << slug único para subdomínio
     email = models.EmailField(unique=True)
 
     # flags de perfil
@@ -54,6 +57,26 @@ class User(AbstractUser):
     def __str__(self):
         role = "Owner" if self.is_owner else ("Cliente" if self.is_client else "Usuário")
         return f"{self.email or self.full_name} ({role})"
+
+    def save(self, *args, **kwargs):
+        # gera slug do grupo apenas para owners, se ainda não existir
+        if self.is_owner and not self.grupo:
+            base = (self.nome or "").lower()
+            sobrenome = (self.sobrenome or "").lower()
+            iniciais = sobrenome[:2] if sobrenome else ""
+
+            base_slug = slugify(f"{base}{iniciais}") or "grupo"
+            candidato = base_slug
+            i = 1
+
+            # garante unicidade
+            while User.objects.filter(grupo=candidato).exclude(pk=self.pk).exists():
+                i += 1
+                candidato = f"{base_slug}{i}"
+
+            self.grupo = candidato
+
+        super().save(*args, **kwargs)
 
 class Plan(models.TextChoices):
     FREE = "free", "Free (7 dias)"

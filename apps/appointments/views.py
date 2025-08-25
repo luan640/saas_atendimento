@@ -19,8 +19,12 @@ def agendamento_profissionais(request):
     shop_slug = request.session.get("shop_slug")
     loja = get_object_or_404(Loja, slug=shop_slug, ativa=True)
     funcionarios = loja.funcionarios.filter(ativo=True).order_by("nome")
-    return render(request, "appointments/partials/profissionais.html", {"funcionarios": funcionarios})
 
+    ctx = {"loja": loja, "funcionarios": funcionarios}
+
+    if request.headers.get("HX-Request"):
+        return render(request, "appointments/partials/profissionais.html", ctx)
+    return render(request, "appointments/profissionais.html", ctx)
 
 @login_required
 def agendamento_servicos(request, funcionario_id):
@@ -30,7 +34,24 @@ def agendamento_servicos(request, funcionario_id):
 
     if request.method == "POST":
         selecionados = request.POST.getlist("servicos")
+
+        if not selecionados:
+            # nenhum serviço escolhido → volta para a etapa 2 com erro
+            return render(
+                request,
+                "appointments/partials/servicos.html",
+                {
+                    "funcionario": funcionario,
+                    "servicos": servicos,
+                    "selecionados": [],
+                    "erro": "Você deve selecionar pelo menos um serviço.",
+                },
+                status=422
+            )
+
+        # salva os IDs escolhidos na sessão
         request.session["agendamento_servicos"] = selecionados
+
         response = render(
             request,
             "appointments/partials/datahora.html",

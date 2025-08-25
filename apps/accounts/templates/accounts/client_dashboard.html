@@ -1,15 +1,17 @@
-{% extends 'accounts/base_client.html' %}
+{% extends "accounts/base_client.html" %}
 {% block title %}Área do Cliente{% endblock %}
+
 {% block content %}
 <h3 class="mb-3">Olá, {{ request.user.full_name|default:"Cliente" }}</h3>
-<p>Você está autenticado como cliente ({{ request.user.phone }}). A partir daqui você pode listar serviços, escolher profissional e criar agendamento.</p>
+<p>Você está autenticado como cliente ({{ request.user.phone }}).</p>
 
 {% if loja %}
   <hr>
   <p>Loja selecionada: <strong>{{ loja.nome }}</strong></p>
   {% if loja.endereco %}<p class="text-muted">Endereço: {{ loja.endereco }}</p>{% endif %}
-{% else %}
-  <hr>
-  <p class="text-muted">Nenhuma loja selecionada no momento.</p>
 {% endif %}
+
+<div id="client-dashboard-fragment">
+  {% include "accounts/partials/client_dashboard.html" %}
+</div>
 {% endblock %}

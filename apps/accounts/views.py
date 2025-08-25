@@ -12,6 +12,7 @@ from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
 from apps.cadastro.models import Loja
 from apps.accounts.decorators import subscription_required
+from apps.appointments.models import Agendamento
 
 # ========== OWNER ==========
 
@@ -175,4 +176,17 @@ def client_dashboard(request):
         from apps.cadastro.models import Loja
         loja = Loja.objects.filter(slug=shop_slug, ativa=True).first()
 
-    return render(request, 'accounts/client_dashboard.html', {'loja': loja})
+    agendamentos = Agendamento.objects.filter(cliente=request.user)
+    if loja:
+        agendamentos = agendamentos.filter(loja=loja)
+    agendamentos = agendamentos.select_related("funcionario", "loja").prefetch_related("servicos").order_by("-data", "-hora")
+
+    return render(
+        request,
+        "accounts/client_dashboard.html",
+        {
+            "loja": loja,
+            "agendamentos": agendamentos,
+        }
+    )
+
