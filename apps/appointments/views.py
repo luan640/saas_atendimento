@@ -11,7 +11,11 @@ def agendamento_start(request):
     """Página inicial que carrega os passos via HTMX."""
     request.session.pop("agendamento_funcionario", None)
     request.session.pop("agendamento_servicos", None)
-    return render(request, "appointments/agendamento_base.html")
+    return render(
+        request,
+        "appointments/agendamento_base.html",
+        {"initial_url": reverse("appointments:agendamento_profissionais")},
+    )
 
 
 @login_required
@@ -24,13 +28,28 @@ def agendamento_profissionais(request):
 
     if request.headers.get("HX-Request"):
         return render(request, "appointments/partials/profissionais.html", ctx)
-    return render(request, "appointments/profissionais.html", ctx)
+    return render(
+        request,
+        "appointments/agendamento_base.html",
+        {"initial_url": reverse("appointments:agendamento_profissionais")},
+    )
 
 @login_required
 def agendamento_servicos(request, funcionario_id):
     funcionario = get_object_or_404(Funcionario, id=funcionario_id, ativo=True)
     request.session["agendamento_funcionario"] = funcionario.id
     servicos = funcionario.servicos.filter(ativo=True).order_by("nome")
+
+    if not request.headers.get("HX-Request") and request.method == "GET":
+        return render(
+            request,
+            "appointments/agendamento_base.html",
+            {
+                "initial_url": reverse(
+                    "appointments:agendamento_servicos", args=[funcionario.id]
+                )
+            },
+        )
 
     if request.method == "POST":
         selecionados = request.POST.getlist("servicos")
@@ -83,6 +102,13 @@ def agendamento_datahora(request):
     funcionario = get_object_or_404(Funcionario, id=funcionario_id, ativo=True)
     servicos = Servico.objects.filter(id__in=servico_ids, profissionais=funcionario, ativo=True)
 
+    if not request.headers.get("HX-Request") and request.method == "GET":
+        return render(
+            request,
+            "appointments/agendamento_base.html",
+            {"initial_url": reverse("appointments:agendamento_datahora")},
+        )
+
     if request.method == "POST":
         form = AgendamentoDataHoraForm(request.POST)
         if form.is_valid():
@@ -114,8 +140,18 @@ def agendamento_datahora(request):
 @login_required
 def agendamento_confirmacao(request, agendamento_id):
     agendamento = get_object_or_404(Agendamento, id=agendamento_id, cliente=request.user)
+    if request.headers.get("HX-Request"):
+        return render(
+            request,
+            "appointments/partials/confirmacao.html",
+            {"agendamento": agendamento},
+        )
     return render(
         request,
-        "appointments/partials/confirmacao.html",
-        {"agendamento": agendamento},
+        "appointments/agendamento_base.html",
+        {
+            "initial_url": reverse(
+                "appointments:agendamento_confirmacao", args=[agendamento.id]
+            )
+        },
     )
