@@ -12,20 +12,22 @@
     <td class="text-end">
       <button
         class="btn btn-sm btn-outline-primary"
+        data-bs-toggle="modal"
+        data-bs-target="#modalFuncionario"
         hx-get="{% url 'cadastro:funcionario_edit' f.pk %}"
         hx-target="#modalFuncionario .modal-content"
         hx-swap="innerHTML"
-        hx-on="htmx:afterOnLoad: (function(){ const m=document.getElementById('modalFuncionario'); if(m){ bootstrap.Modal.getOrCreateInstance(m).show(); } })()"
       >
         Editar
       </button>
 
       <button
         class="btn btn-sm btn-outline-danger"
+        data-bs-toggle="modal"
+        data-bs-target="#modalFuncionario"
         hx-get="{% url 'cadastro:funcionario_delete' f.pk %}"
         hx-target="#modalFuncionario .modal-content"
         hx-swap="innerHTML"
-        hx-on="htmx:afterOnLoad: (function(){ const m=document.getElementById('modalFuncionario'); if(m){ bootstrap.Modal.getOrCreateInstance(m).show(); } })()"
       >
         Excluir
       </button>
