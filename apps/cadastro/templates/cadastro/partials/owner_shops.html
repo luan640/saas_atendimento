@@ -1,7 +1,7 @@
 <div class="table-responsive">
   <table class="table table-striped">
     <thead>
-      <tr><th>Nome</th><th>Link público</th><th>Status</th></tr>
+      <tr><th>Nome</th><th>Link público</th><th>Status</th><th class="text-end">Ações</th></tr>
     </thead>
     <tbody id="lojas-tbody">
       {% for loja in lojas %}
@@ -17,9 +17,32 @@
             <span class="badge bg-secondary">Inativa</span>
           {% endif %}
         </td>
+        <td class="text-end">
+          <button
+            class="btn btn-sm btn-outline-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#modalShell"
+            hx-get="{% url 'cadastro:owner_shop_edit' loja.pk %}"
+            hx-target="#modalShell .modal-content"
+            hx-swap="innerHTML"
+          >
+            Editar
+          </button>
+
+          <button
+            class="btn btn-sm btn-outline-danger"
+            data-bs-toggle="modal"
+            data-bs-target="#modalShell"
+            hx-get="{% url 'cadastro:owner_shop_delete' loja.pk %}"
+            hx-target="#modalShell .modal-content"
+            hx-swap="innerHTML"
+          >
+            Excluir
+          </button>
+        </td>
       </tr>
       {% empty %}
-      <tr><td colspan="3" class="text-muted">Nenhuma loja ainda.</td></tr>
+      <tr><td colspan="4" class="text-muted">Nenhuma loja ainda.</td></tr>
       {% endfor %}
     </tbody>
   </table>

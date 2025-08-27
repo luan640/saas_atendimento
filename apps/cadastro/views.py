@@ -116,6 +116,45 @@ def owner_shops(request):
 
     return render(request, 'cadastro/owner_shops.html', {'form': form, 'lojas': lojas})
 
+@login_required
+@subscription_required
+def owner_shop_edit(request, pk):
+    """Edita uma loja do owner via HTMX (modal)."""
+    loja = get_object_or_404(Loja, pk=pk, owner=request.user)
+
+    if request.method == 'POST':
+        form = LojaForm(request.POST, instance=loja, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Loja atualizada com sucesso!')
+            lojas = request.user.lojas.all().order_by('-criada_em')
+            return render(request, 'cadastro/partials/owner_shops.html', {'lojas': lojas})
+        else:
+            # Retorna o corpo do modal com erros e orienta o HTMX a retargetar para o modal
+            response = render(request, 'cadastro/partials/loja_form.html', {'form': form, 'loja': loja, 'acao': 'Editar Loja'})
+            response['HX-Retarget'] = '#modalShell .modal-content'
+            return response
+
+    # GET → carrega o formulário de edição dentro do modal
+    form = LojaForm(instance=loja, user=request.user)
+    return render(request, 'cadastro/partials/loja_form.html', {'form': form, 'loja': loja, 'acao': 'Editar Loja'})
+
+
+@login_required
+@subscription_required
+def owner_shop_delete(request, pk):
+    """Exclui uma loja do owner via HTMX (modal)."""
+    loja = get_object_or_404(Loja, pk=pk, owner=request.user)
+
+    if request.method == 'POST':
+        loja.delete()
+        messages.success(request, 'Loja excluída com sucesso!')
+        lojas = request.user.lojas.all().order_by('-criada_em')
+        return render(request, 'cadastro/partials/owner_shops.html', {'lojas': lojas})
+
+    # GET → confirma a exclusão no modal
+    return render(request, 'cadastro/partials/loja_confirm_delete.html', {'loja': loja})
+
 # ========== FUNCIONÁRIOS ==========
 
 @login_required
