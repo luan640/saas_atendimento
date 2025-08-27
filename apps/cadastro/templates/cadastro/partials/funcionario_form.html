@@ -11,7 +11,7 @@
         hx-include="#filtros-func"
         hx-swap="outerHTML"
         hx-indicator="#funcionarios-loading"
-        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFuncionario')).hide(); } catch(e) {} }">
+        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFuncionarioOps')).hide(); } catch(e) {} }">
     {% csrf_token %}
     {{ form.as_p }}
 

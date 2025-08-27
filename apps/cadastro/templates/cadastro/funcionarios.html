@@ -28,7 +28,7 @@
 <div class="table-responsive">
   <table class="table table-striped align-middle">
     <thead>
-      <tr><th>Nome</th><th>Cargo</th><th>E-mail</th><th>Telefone</th><th>Status</th></tr>
+      <tr><th>Nome</th><th>Cargo</th><th>E-mail</th><th>Telefone</th><th>Status</th><th class="text-end">Ações</th></tr>
     </thead>
     {% include 'cadastro/partials/funcionarios.html' %}
   </table>
@@ -36,6 +36,7 @@
 
 <div id="funcionarios-loading" class="htmx-indicator mt-2">Carregando...</div>
 
+<!-- Modal add funcionario -->
 <div class="modal fade" id="modalFuncionario" tabindex="-1" aria-labelledby="modalFuncionarioLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -80,4 +81,12 @@
     </div>
   </div>
 </div>
+
+<!-- Modal exclusivo para Editar/Excluir funcionário -->
+<div class="modal fade" id="modalFuncionarioOps" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content"><!-- conteúdo HTMX será injetado aqui --></div>
+  </div>
+</div>
+
 {% endblock %}
