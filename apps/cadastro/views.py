@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from .models import Loja
+from .models import Loja, Funcionario
 from .forms import LojaForm, FuncionarioForm, ServicoForm
 from apps.accounts.decorators import subscription_required
 
@@ -210,6 +210,69 @@ def funcionarios(request):
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'cadastro/partials/funcionarios.html', ctx)
     return render(request, 'cadastro/funcionarios.html', ctx)
+
+@login_required
+@subscription_required
+def funcionario_edit(request, pk):
+    """
+    Edita um funcionário do owner via HTMX, reutilizando o modal #modalFuncionario.
+    Não altera a view `funcionarios`.
+    """
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    # Lista de lojas do owner e loja ativa conforme filtro atual
+    lojas_qs = request.user.lojas.order_by('nome')
+    func = get_object_or_404(Funcionario, pk=pk, loja__owner=request.user)
+
+    if request.method == 'POST':
+        form = FuncionarioForm(request.POST, instance=func, lojas=lojas_qs)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Funcionário atualizado!')
+
+            # Recarrega a lista para a loja atualmente filtrada
+            loja = _get_loja_ativa(request, lojas_qs)
+            funcionarios_qs = (loja.funcionarios.order_by('nome') if loja else [])
+            ctx = {'lojas': lojas_qs, 'loja': loja, 'funcionarios': funcionarios_qs}
+
+            # devolve apenas o <tbody> para substituir na tabela
+            return render(request, 'cadastro/partials/funcionarios.html', ctx)
+
+        # Erros de validação → atualizar APENAS o modal
+        resp = render(request, 'cadastro/partials/funcionario_form.html',
+                      {'form': form, 'funcionario': func, 'acao': 'Editar funcionário'})
+        resp['HX-Retarget'] = '#modalFuncionario .modal-content'
+        return resp
+
+    # GET → carregamos o conteúdo do modal de edição
+    form = FuncionarioForm(instance=func, lojas=lojas_qs)
+    return render(request, 'cadastro/partials/funcionario_form.html',
+                  {'form': form, 'funcionario': func, 'acao': 'Editar funcionário'})
+
+@login_required
+@subscription_required
+def funcionario_delete(request, pk):
+    """
+    Exclui um funcionário do owner via HTMX (confirmação em modal).
+    """
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    lojas_qs = request.user.lojas.order_by('nome')
+    func = get_object_or_404(Funcionario, pk=pk, loja__owner=request.user)
+
+    if request.method == 'POST':
+        func.delete()
+        messages.success(request, 'Funcionário excluído!')
+
+        loja = _get_loja_ativa(request, lojas_qs)
+        funcionarios_qs = (loja.funcionarios.order_by('nome') if loja else [])
+        ctx = {'lojas': lojas_qs, 'loja': loja, 'funcionarios': funcionarios_qs}
+        return render(request, 'cadastro/partials/funcionarios.html', ctx)
+
+    # GET → confirma a exclusão
+    return render(request, 'cadastro/partials/funcionario_confirm_delete.html', {'funcionario': func})
 
 # ========== SERVIÇOS ==========
 
