@@ -38,8 +38,8 @@
               <tbody>
                 {% for a in pendentes %}
                 <tr>
-                  <td>{{ a.inicio|date:"d/m/Y H:i" }}</td>
-                  <td>{{ a.profissional }}</td>
+                  <td>{{ a.data|date:"d/m/Y" }} {{ a.hora|time:"H:i" }}</td>
+                  <td>{{ a.funcionario }}</td>
                   <td>{{ a.cliente|default:"—" }}</td>
                   <td>
                     {% if a.servicos.all %}
@@ -50,7 +50,7 @@
                       <span class="text-muted">—</span>
                     {% endif %}
                   </td>
-                  <td>{{ a.get_status_display|default:a.status }}</td>
+                  <td>{% if a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="5" class="text-muted">Sem pendentes.</td></tr>
@@ -83,8 +83,8 @@
               <tbody>
                 {% for a in realizados %}
                 <tr>
-                  <td>{{ a.inicio|date:"d/m/Y H:i" }}</td>
-                  <td>{{ a.profissional }}</td>
+                  <td>{{ a.data|date:"d/m/Y" }} {{ a.hora|time:"H:i" }}</td>
+                  <td>{{ a.funcionario }}</td>
                   <td>{{ a.cliente|default:"—" }}</td>
                   <td>
                     {% if a.servicos.all %}
@@ -95,7 +95,7 @@
                       <span class="text-muted">—</span>
                     {% endif %}
                   </td>
-                  <td>{{ a.get_status_display|default:a.status }}</td>
+                  <td>{% if a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="5" class="text-muted">Sem realizados.</td></tr>
