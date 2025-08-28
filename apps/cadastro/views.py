@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from .models import Loja, Funcionario
+from .models import Loja, Funcionario, Servico
 from .forms import LojaForm, FuncionarioForm, ServicoForm
 from apps.accounts.decorators import subscription_required
 
@@ -367,3 +367,85 @@ def servico_form(request):
     lojas_qs = request.user.lojas.order_by('nome')
     form = ServicoForm(request.GET or None, lojas=lojas_qs)
     return render(request, 'cadastro/partials/servico_form.html', {'form': form})
+
+@login_required
+@subscription_required
+def servico_edit(request, pk):
+    """Edita um serviço via HTMX (modal)."""
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    lojas_qs = request.user.lojas.order_by('nome')
+    serv = get_object_or_404(Servico, pk=pk, loja__owner=request.user)
+
+    if request.method == 'POST':
+        form = ServicoForm(request.POST, instance=serv, lojas=lojas_qs)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.save()
+            form.save_m2m()
+            messages.success(request, 'Serviço atualizado!')
+
+            # Recarrega lista com a loja/filtros atuais
+            loja = _get_loja_ativa(request, lojas_qs)
+            filtros = _parse_filtros(request)
+            qs = _aplica_filtros(
+                loja.servicos.select_related('loja')
+                             .prefetch_related('profissionais')
+                             .order_by('nome'),
+                filtros
+            )
+            ctx = {
+                'lojas': lojas_qs,
+                'loja': loja,
+                'servicos': qs,
+                'filtros': filtros,
+                'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
+            }
+            return render(request, 'cadastro/partials/servicos.html', ctx)
+
+        # Erros de validação -> mantém no modal
+        resp = render(request, 'cadastro/partials/servico_form_edit.html',
+                      {'form': form, 'servico': serv, 'acao': 'Editar serviço'})
+        resp['HX-Retarget'] = '#modalServicoOps .modal-content'
+        return resp
+
+    # GET -> carrega form no modal
+    form = ServicoForm(instance=serv, lojas=lojas_qs)
+    return render(request, 'cadastro/partials/servico_form_edit.html',
+                  {'form': form, 'servico': serv, 'acao': 'Editar serviço'})
+
+
+@login_required
+@subscription_required
+def servico_delete(request, pk):
+    """Exclui um serviço via HTMX (confirmação em modal)."""
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    lojas_qs = request.user.lojas.order_by('nome')
+    serv = get_object_or_404(Servico, pk=pk, loja__owner=request.user)
+
+    if request.method == 'POST':
+        serv.delete()
+        messages.success(request, 'Serviço excluído!')
+
+        loja = _get_loja_ativa(request, lojas_qs)
+        filtros = _parse_filtros(request)
+        qs = _aplica_filtros(
+            loja.servicos.select_related('loja')
+                         .prefetch_related('profissionais')
+                         .order_by('nome'),
+            filtros
+        )
+        ctx = {
+            'lojas': lojas_qs,
+            'loja': loja,
+            'servicos': qs,
+            'filtros': filtros,
+            'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
+        }
+        return render(request, 'cadastro/partials/servicos.html', ctx)
+
+    # GET -> confirma exclusão
+    return render(request, 'cadastro/partials/servico_confirm_delete.html', {'servico': serv})

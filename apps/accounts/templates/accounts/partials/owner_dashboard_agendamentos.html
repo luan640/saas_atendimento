@@ -1,0 +1,110 @@
+<div id="agendamentos-section">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="m-0">Agendamentos</h5>
+    <form id="filtro-agendamentos" class="d-flex align-items-center gap-2">
+      <label class="form-label m-0">Loja:</label>
+      <select name="loja_filtro" class="form-select form-select-sm"
+              hx-get="{% url 'accounts:owner_dashboard_agendamentos' %}"
+              hx-target="#agendamentos-section"
+              hx-select="#agendamentos-section"
+              hx-swap="outerHTML"
+              hx-trigger="change">
+        {% for l in lojas %}
+          <option value="{{ l.id }}" {% if loja and l.id == loja.id %}selected{% endif %}>{{ l.nome }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Pendentes</strong>
+          <span class="badge bg-warning text-dark">{{ total_pendentes }}</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Profissional</th>
+                  <th>Cliente</th>
+                  <th>Serviços</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in pendentes %}
+                <tr>
+                  <td>{{ a.inicio|date:"d/m/Y H:i" }}</td>
+                  <td>{{ a.profissional }}</td>
+                  <td>{{ a.cliente|default:"—" }}</td>
+                  <td>
+                    {% if a.servicos.all %}
+                      {% for s in a.servicos.all %}
+                        <span class="badge text-bg-light">{{ s.nome }}</span>
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ a.get_status_display|default:a.status }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-muted">Sem pendentes.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div><!-- col -->
+
+    <div class="col-md-6">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Realizados</strong>
+          <span class="badge bg-success">{{ total_realizados }}</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
+            <table class="table table-sm table-striped align-middle mb-0">
+              <thead class="table-light sticky-top">
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Profissional</th>
+                  <th>Cliente</th>
+                  <th>Serviços</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in realizados %}
+                <tr>
+                  <td>{{ a.inicio|date:"d/m/Y H:i" }}</td>
+                  <td>{{ a.profissional }}</td>
+                  <td>{{ a.cliente|default:"—" }}</td>
+                  <td>
+                    {% if a.servicos.all %}
+                      {% for s in a.servicos.all %}
+                        <span class="badge text-bg-light">{{ s.nome }}</span>
+                      {% endfor %}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ a.get_status_display|default:a.status }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-muted">Sem realizados.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div><!-- col -->
+  </div><!-- row -->
+</div>

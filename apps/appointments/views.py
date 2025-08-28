@@ -1,10 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+
 from apps.cadastro.models import Loja, Funcionario, Servico
 from .models import Agendamento
 from .forms import AgendamentoDataHoraForm
-
 
 @login_required
 def agendamento_start(request):
@@ -16,7 +16,6 @@ def agendamento_start(request):
         "appointments/agendamento_base.html",
         {"initial_url": reverse("appointments:agendamento_profissionais")},
     )
-
 
 @login_required
 def agendamento_profissionais(request):
@@ -94,7 +93,6 @@ def agendamento_servicos(request, funcionario_id):
         },
     )
 
-
 @login_required
 def agendamento_datahora(request):
     funcionario_id = request.session.get("agendamento_funcionario")
@@ -135,7 +133,6 @@ def agendamento_datahora(request):
         "appointments/partials/datahora.html",
         {"funcionario": funcionario, "servicos": servicos, "form": form},
     )
-
 
 @login_required
 def agendamento_confirmacao(request, agendamento_id):

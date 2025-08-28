@@ -146,6 +146,7 @@
         <th>Loja</th>
         <th>Status</th>
         <th>Funcionários</th>
+        <th class="text-end">Ações</th>
       </tr>
     </thead>
 
@@ -169,6 +170,13 @@
       {% include 'cadastro/partials/servico_form.html' %}
 
     </div>
+  </div>
+</div>
+
+{# ------------------- MODAL: EDIT E DELETE ------------------- #}
+<div class="modal fade" id="modalServicoOps" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content"><!-- conteúdo HTMX é injetado aqui --></div>
   </div>
 </div>
 

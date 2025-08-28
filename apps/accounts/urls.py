@@ -9,6 +9,7 @@ urlpatterns = [
     path('login/', views.owner_login, name='owner_login'),
     path('logout/', views.owner_logout, name='owner_logout'),
     path('dashboard/', views.owner_dashboard, name='owner_dashboard'),
+    path("dashboard/agendamentos/", views.owner_dashboard_agendamentos, name="owner_dashboard_agendamentos"),
 
     # Cliente (OTP)
     path('client/start/<slug:slug>/', views.client_start_loja, name='client_start_loja'),

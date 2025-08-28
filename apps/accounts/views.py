@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.http import HttpResponse
+from django.db.models import Q
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
@@ -66,6 +67,34 @@ def owner_dashboard(request):
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'accounts/partials/owner_dashboard.html', ctx)
     return render(request, 'accounts/owner_dashboard.html', ctx)
+
+@login_required
+@subscription_required
+def owner_dashboard_agendamentos(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    lojas = request.user.lojas.order_by('nome')
+    loja_id = request.GET.get('loja_filtro') or request.GET.get('loja')
+    loja_sel = get_object_or_404(lojas, pk=loja_id) if loja_id else (lojas.first() if lojas.exists() else None)
+
+    base = Agendamento.objects.filter(loja__owner=request.user)
+    if loja_sel:
+        base = base.filter(loja=loja_sel)
+
+    # Tentamos cobrir 2 cenários: por status OU por booleano realizado
+    pendentes = base.filter(confirmado=False).order_by('criado_em')[:20]
+    realizados = base.filter(confirmado=True).order_by('-criado_em')[:20]
+
+    ctx = {
+        'lojas': lojas,
+        'loja': loja_sel,
+        'pendentes': pendentes,
+        'realizados': realizados,
+        'total_pendentes': base.filter(confirmado=False).count(),
+        'total_realizados': base.filter(confirmado=True).count(),
+    }
+    return render(request, 'accounts/partials/owner_dashboard_agendamentos.html', ctx)
 
 @login_required
 @subscription_required
