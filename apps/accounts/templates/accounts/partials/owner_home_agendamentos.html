@@ -4,7 +4,7 @@
     <form id="filtro-agendamentos" class="d-flex align-items-center gap-2">
       <label class="form-label m-0">Loja:</label>
       <select name="loja_filtro" class="form-select form-select-sm"
-              hx-get="{% url 'accounts:owner_dashboard_agendamentos' %}"
+              hx-get="{% url 'accounts:owner_home_agendamentos' %}"
               hx-target="#agendamentos-section"
               hx-select="#agendamentos-section"
               hx-swap="outerHTML"

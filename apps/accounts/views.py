@@ -42,10 +42,10 @@ def owner_login(request):
             # Se veio via HTMX, devolve HX-Redirect para a URL certa
             if request.headers.get('HX-Request'):
                 resp = HttpResponse(status=204)
-                resp['HX-Redirect'] = next_url or reverse('accounts:owner_dashboard')
+                resp['HX-Redirect'] = next_url or reverse('accounts:owner_home')
                 return resp
 
-            return redirect(next_url or 'accounts:owner_dashboard')
+            return redirect(next_url or 'accounts:owner_home')
 
         # Form inválido
         template = 'accounts/partials/owner_login.html' if request.headers.get('HX-Request') \
@@ -60,17 +60,17 @@ def owner_login(request):
 
 @login_required
 @subscription_required
-def owner_dashboard(request):
+def owner_home(request):
     sub = getattr(request.user, 'subscription', None)
     ctx = {'subscription': sub}
     target = request.headers.get('HX-Target')
     if request.headers.get('HX-Request') and target != 'content':
-        return render(request, 'accounts/partials/owner_dashboard.html', ctx)
-    return render(request, 'accounts/owner_dashboard.html', ctx)
+        return render(request, 'accounts/partials/owner_home.html', ctx)
+    return render(request, 'accounts/owner_home.html', ctx)
 
 @login_required
 @subscription_required
-def owner_dashboard_agendamentos(request):
+def owner_home_agendamentos(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
 
@@ -94,7 +94,7 @@ def owner_dashboard_agendamentos(request):
         'total_pendentes': base.filter(confirmado=False).count(),
         'total_realizados': base.filter(confirmado=True).count(),
     }
-    return render(request, 'accounts/partials/owner_dashboard_agendamentos.html', ctx)
+    return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
 
 @login_required
 @subscription_required
