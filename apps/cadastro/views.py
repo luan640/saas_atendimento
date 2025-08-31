@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from .models import Loja, Funcionario, Servico
+from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal
 from .forms import (
     LojaForm,
     FuncionarioForm,
@@ -178,7 +178,12 @@ def funcionarios(request):
             'lojas': lojas_qs,
             'loja': None,
             'form': FuncionarioForm(lojas=lojas_qs),
-            'formset': FuncionarioAgendaSemanalFormSet(instance=Funcionario(), prefix='agenda'),
+            'formset': FuncionarioAgendaSemanalFormSet(
+                instance=Funcionario(),
+                prefix='agenda',
+                queryset=FuncionarioAgendaSemanal.objects.none(),
+                initial=[{'weekday': i} for i in range(7)],
+            ),
             'funcionarios': []
         }
         if request.headers.get('HX-Request') and target != 'content':
@@ -201,7 +206,7 @@ def funcionarios(request):
             formset = FuncionarioAgendaSemanalFormSet(
                 instance=novo_inst,
                 prefix='agenda',
-                queryset=novo_inst.agendas_semanais.none(),
+                queryset=FuncionarioAgendaSemanal.objects.none(),
                 initial=[{'weekday': i} for i in range(7)],
             )
             ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
@@ -226,7 +231,7 @@ def funcionarios(request):
     formset = FuncionarioAgendaSemanalFormSet(
         instance=inst,
         prefix='agenda',
-        queryset=inst.agendas_semanais.none(),
+        queryset=FuncionarioAgendaSemanal.objects.none(),
         initial=[{'weekday': i} for i in range(7)],
     )
     qs = loja.funcionarios.order_by('nome')
