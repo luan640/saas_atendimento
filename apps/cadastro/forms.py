@@ -1,6 +1,7 @@
 from django import forms
 from django.urls import reverse
-from .models import Loja, Funcionario, Servico
+from django.forms import inlineformset_factory
+from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal
 from apps.accounts.models import Plan, PlanInfo
 
 
@@ -146,3 +147,32 @@ class ServicoForm(forms.ModelForm):
             self.fields["profissionais"].queryset = loja_obj.funcionarios.filter(ativo=True).order_by("nome")
         else:
             self.fields["profissionais"].queryset = Funcionario.objects.none()
+
+
+class FuncionarioAgendaSemanalForm(forms.ModelForm):
+    inicio = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
+    fim = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
+    almoco_inicio = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
+    almoco_fim = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
+    slot_interval_minutes = forms.IntegerField(required=False)
+
+    class Meta:
+        model = FuncionarioAgendaSemanal
+        fields = [
+            "weekday",
+            "inicio",
+            "fim",
+            "almoco_inicio",
+            "almoco_fim",
+            "ativo",
+            "slot_interval_minutes",
+        ]
+
+
+FuncionarioAgendaSemanalFormSet = inlineformset_factory(
+    Funcionario,
+    FuncionarioAgendaSemanal,
+    form=FuncionarioAgendaSemanalForm,
+    extra=0,
+    can_delete=True,
+)
