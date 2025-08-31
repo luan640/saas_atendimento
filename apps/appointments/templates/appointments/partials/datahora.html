@@ -4,22 +4,15 @@
 <form method="post" hx-post="{% url 'appointments:agendamento_datahora' %}" hx-target="#step-container">
   {% csrf_token %}
   <div class="mb-3">
-    {{ form.data.label_tag }}
-    <input type="date" name="data" value="{{ form.data.value|date:'Y-m-d'|default_if_none:'' }}"
-           hx-get="{% url 'appointments:agendamento_datahora' %}"
-           hx-target="#step-container" hx-trigger="change" hx-push-url="true" />
+    {{ form.data.label_tag }} {{ form.data }}
   </div>
-  {% if slots %}
   <div class="mb-3">
     {{ form.hora.label_tag }} {{ form.hora }}
   </div>
-  {% else %}
-  <p>Nenhum horário disponível para esta data.</p>
-  {% endif %}
   <div class="d-flex justify-content-between">
     <button type="button" class="btn btn-secondary"
             hx-get="{% url 'appointments:agendamento_servicos' funcionario.id %}"
             hx-target="#step-container" hx-push-url="true">Voltar</button>
-    <button type="submit" class="btn btn-primary" {% if not slots %}disabled{% endif %}>Confirmar</button>
+    <button type="submit" class="btn btn-primary">Confirmar</button>
   </div>
 </form>

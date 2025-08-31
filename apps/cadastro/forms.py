@@ -1,8 +1,7 @@
 from django import forms
 from django.urls import reverse
-from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal
+from .models import Loja, Funcionario, Servico
 from apps.accounts.models import Plan, PlanInfo
-from django.forms import inlineformset_factory
 
 
 class LojaForm(forms.ModelForm):
@@ -50,14 +49,20 @@ class LojaForm(forms.ModelForm):
 
         return cleaned
 
-
 class FuncionarioForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
-    slot_interval_minutes = forms.IntegerField(min_value=1, label="Tempo do slot (minutos)")
 
     class Meta:
         model = Funcionario
-        fields = ["loja", "nome", "cargo", "email", "telefone", "ativo", "slot_interval_minutes"]
+        fields = ["loja", "nome", "cargo", "email", "telefone", "ativo"]
+        labels = {
+            "nome": "Nome",
+            "cargo": "Cargo",
+            "email": "E-mail",
+            "telefone": "Telefone",
+            "ativo": "Ativo?",
+            "loja": "Loja",
+        }
         widgets = {
             "nome": forms.TextInput(attrs={"placeholder": "Ex.: Pedro Alves"}),
             "email": forms.EmailInput(attrs={"placeholder": "exemplo@dominio.com"}),
@@ -70,49 +75,22 @@ class FuncionarioForm(forms.ModelForm):
         self.fields["loja"].queryset = lojas
 
     def clean(self):
-        cleaned = super().clean()
-        loja = cleaned.get("loja")
-        if not self.instance.pk and loja and hasattr(loja, "owner") and hasattr(loja.owner, "subscription"):
-            limites = PlanInfo.objects.get(plan=loja.owner.subscription.plan)
-            if loja.funcionarios.count() >= limites.max_funcionarios:
-                raise forms.ValidationError(
-                    f"O plano atual permite no máximo {limites.max_funcionarios} funcionário(s) por loja."
-                )
-        return cleaned
+        cleaned_data = super().clean()
 
+        loja = cleaned_data.get("loja")
+        if not self.instance.pk and loja:
+            owner = loja.owner
+            if hasattr(owner, "subscription"):
+                plano_atual = owner.subscription.plan
+                limites = PlanInfo.objects.get(plan=plano_atual)
 
-class FuncionarioAgendaSemanalForm(forms.ModelForm):
-    class Meta:
-        model = FuncionarioAgendaSemanal
-        fields = ["weekday", "ativo", "inicio", "fim", "almoco_inicio", "almoco_fim", "slot_interval_minutes"]
-        widgets = {
-            "inicio": forms.TimeInput(attrs={"type": "time"}),
-            "fim": forms.TimeInput(attrs={"type": "time"}),
-            "almoco_inicio": forms.TimeInput(attrs={"type": "time"}),
-            "almoco_fim": forms.TimeInput(attrs={"type": "time"}),
-        }
+                qtd_funcionarios = loja.funcionarios.count()
+                if qtd_funcionarios >= limites.max_funcionarios:
+                    raise forms.ValidationError(
+                        f"O plano atual permite no máximo {limites.max_funcionarios} funcionário(s) por loja."
+                    )
 
-    def clean(self):
-        cleaned = super().clean()
-        if cleaned.get("ativo"):
-            ini, fim = cleaned.get("inicio"), cleaned.get("fim")
-            ai, af = cleaned.get("almoco_inicio"), cleaned.get("almoco_fim")
-            if not ini or not fim or ini >= fim:
-                raise forms.ValidationError("Defina início < fim para dias ativos.")
-            if (ai and not af) or (af and not ai):
-                raise forms.ValidationError("Preencha os dois horários de almoço ou deixe ambos vazios.")
-            if ai and af and not (ini < ai < af < fim):
-                raise forms.ValidationError("Almoço deve estar dentro do expediente.")
-        return cleaned
-
-FuncionarioAgendaSemanalFormSet = inlineformset_factory(
-    Funcionario,
-    FuncionarioAgendaSemanal,
-    form=FuncionarioAgendaSemanalForm,
-    extra=0,
-    can_delete=False,
-    max_num=7,
-)
+        return cleaned_data
 
 class ServicoForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")

@@ -70,7 +70,6 @@ class Funcionario(models.Model):
     telefone = models.CharField(max_length=17, blank=True, null=True, validators=[phone_regex])
     slug = models.SlugField(max_length=160, blank=True)
     ativo = models.BooleanField(default=True)
-
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
