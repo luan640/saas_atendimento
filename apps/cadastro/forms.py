@@ -1,6 +1,6 @@
 from django import forms
 from django.urls import reverse
-from .models import Loja, Funcionario, Servico
+from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal
 from apps.accounts.models import Plan, PlanInfo
 
 
@@ -51,10 +51,26 @@ class LojaForm(forms.ModelForm):
 
 class FuncionarioForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
+    dias_semana = forms.MultipleChoiceField(
+        choices=FuncionarioAgendaSemanal.DiaSemana.choices,
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Dias da semana",
+    )
+    slot_interval_minutes = forms.IntegerField(min_value=1, label="Tempo do slot (minutos)")
 
     class Meta:
         model = Funcionario
-        fields = ["loja", "nome", "cargo", "email", "telefone", "ativo"]
+        fields = [
+            "loja",
+            "nome",
+            "cargo",
+            "email",
+            "telefone",
+            "ativo",
+            "dias_semana",
+            "slot_interval_minutes",
+        ]
         labels = {
             "nome": "Nome",
             "cargo": "Cargo",
@@ -62,6 +78,8 @@ class FuncionarioForm(forms.ModelForm):
             "telefone": "Telefone",
             "ativo": "Ativo?",
             "loja": "Loja",
+            "dias_semana": "Dias da semana",
+            "slot_interval_minutes": "Tempo do slot (minutos)",
         }
         widgets = {
             "nome": forms.TextInput(attrs={"placeholder": "Ex.: Pedro Alves"}),
@@ -73,6 +91,8 @@ class FuncionarioForm(forms.ModelForm):
         lojas = kwargs.pop("lojas", Loja.objects.none())
         super().__init__(*args, **kwargs)
         self.fields["loja"].queryset = lojas
+        if self.instance and self.instance.dias_semana:
+            self.initial["dias_semana"] = self.instance.dias_semana.split(",")
 
     def clean(self):
         cleaned_data = super().clean()
@@ -91,6 +111,14 @@ class FuncionarioForm(forms.ModelForm):
                     )
 
         return cleaned_data
+
+    def save(self, commit=True):
+        inst = super().save(commit=False)
+        dias = self.cleaned_data.get("dias_semana")
+        inst.dias_semana = ",".join(dias) if dias else ""
+        if commit:
+            inst.save()
+        return inst
 
 class ServicoForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")

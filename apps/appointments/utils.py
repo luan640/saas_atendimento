@@ -28,6 +28,16 @@ def get_applicable_schedule(funcionario, dia: date):
     tzname = getattr(getattr(funcionario.loja, 'agendamento_config', None), 'timezone_name', 'America/Fortaleza')
     tz = timezone.pytz.timezone(tzname) if hasattr(timezone, 'pytz') else timezone.get_current_timezone()
 
+    # Se o funcionário tiver dias da semana definidos e o dia não estiver incluso, não há agenda
+    dias_cfg = getattr(funcionario, 'dias_semana', '') or ''
+    if dias_cfg:
+        try:
+            dias_lista = [int(d) for d in dias_cfg.split(',') if d != '']
+        except ValueError:
+            dias_lista = []
+        if dia.weekday() not in dias_lista:
+            return None
+
     # 1) Exceção do dia (se existir)
     exc = funcionario.agendas_excecoes.filter(data=dia).first()
     if exc:
@@ -47,6 +57,7 @@ def get_applicable_schedule(funcionario, dia: date):
         interval = (
             exc.slot_interval_minutes
             or (weekly.slot_interval_minutes if weekly and weekly.slot_interval_minutes else None)
+            or getattr(funcionario, 'slot_interval_minutes', None)
             or getattr(getattr(funcionario.loja, 'agendamento_config', None), 'slot_interval_minutes', 15)
         )
 
@@ -61,6 +72,7 @@ def get_applicable_schedule(funcionario, dia: date):
 
     interval = (
         weekly.slot_interval_minutes
+        or getattr(funcionario, 'slot_interval_minutes', None)
         or getattr(getattr(funcionario.loja, 'agendamento_config', None), 'slot_interval_minutes', 15)
     )
     return (weekly.inicio, weekly.fim, weekly.almoco_inicio, weekly.almoco_fim, interval, tz)
