@@ -13,6 +13,7 @@ class Agendamento(models.Model):
 
     data = models.DateField()
     hora = models.TimeField()
+    duracao_total_minutos = models.PositiveSmallIntegerField(default=0)
 
     criado_em = models.DateTimeField(auto_now_add=True)
     confirmado = models.BooleanField(default=False)

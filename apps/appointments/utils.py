@@ -1,7 +1,7 @@
-from datetime import datetime, timedelta, time
-from typing import List, Tuple
+from datetime import datetime, timedelta, time, date
 from django.utils.timezone import make_aware
-from django.db.models import Q
+from django.utils import timezone
+
 
 def _time_ranges_minus_lunch(start: time, end: time, lunch_start: time | None, lunch_end: time | None):
     """
@@ -83,18 +83,9 @@ def gerar_slots_disponiveis(funcionario, dia: date, duracao_minutos: int) -> lis
     # 1) Constrói janelas do dia (manhã/tarde) excluindo almoço
     windows = _time_ranges_minus_lunch(start_t, end_t, lunch_s, lunch_e)
 
-    # 2) Busca agendamentos existentes para o funcionário no dia (AJUSTE para seu modelo real)
-    # Exemplo assume model Appointment(start_datetime, end_datetime, funcionario, status)
-    from apps.appointment.models import Appointment  # ajuste o import
-    day_start_dt = make_aware(datetime.combine(dia, time.min), timezone=tz)
-    day_end_dt = make_aware(datetime.combine(dia, time.max), timezone=tz)
-
-    # Considera agendamentos não cancelados no dia
-    existing = Appointment.objects.filter(
-        funcionario=funcionario,
-        start_datetime__lt=day_end_dt,
-        end_datetime__gt=day_start_dt,
-    ).exclude(status__in=['cancelado', 'no_show'])
+    # 2) Busca agendamentos existentes para o funcionário no dia
+    from .models import Agendamento
+    existing = Agendamento.objects.filter(funcionario=funcionario, data=dia)
 
     # 3) Gera slots brutos e remove os que conflitam
     slots_ok = []
@@ -110,9 +101,13 @@ def gerar_slots_disponiveis(funcionario, dia: date, duracao_minutos: int) -> lis
                 continue
 
             # checa conflito com agendamentos existentes
-            conflita = existing.filter(
-                Q(start_datetime__lt=slot_end) & Q(end_datetime__gt=s)
-            ).exists()
+            conflita = False
+            for ag in existing:
+                ag_start = make_aware(datetime.combine(ag.data, ag.hora), timezone=tz)
+                ag_end = ag_start + timedelta(minutes=ag.duracao_total_minutos)
+                if ag_start < slot_end and ag_end > s:
+                    conflita = True
+                    break
 
             if not conflita:
                 slots_ok.append(s)
