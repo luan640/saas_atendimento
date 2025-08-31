@@ -38,7 +38,10 @@ def agendamento_profissionais(request):
 
 @login_required
 def agendamento_servicos(request, funcionario_id):
-    funcionario = get_object_or_404(Funcionario, id=funcionario_id, ativo=True)
+    shop_slug = request.session.get("shop_slug")
+    funcionario = get_object_or_404(
+        Funcionario, id=funcionario_id, loja__slug=shop_slug, ativo=True
+    )
     request.session["agendamento_funcionario"] = funcionario.id
     servicos = funcionario.servicos.filter(ativo=True).order_by("nome")
 
@@ -78,7 +81,7 @@ def agendamento_servicos(request, funcionario_id):
             "appointments/partials/datahora.html",
             {
                 "funcionario": funcionario,
-                "servicos": Servico.objects.filter(id__in=selecionados),
+                "servicos": Servico.objects.filter(id__in=selecionados, profissionais=funcionario),
                 "form": AgendamentoDataHoraForm(),
             },
         )
@@ -100,7 +103,10 @@ def agendamento_servicos(request, funcionario_id):
 def agendamento_datahora(request):
     funcionario_id = request.session.get("agendamento_funcionario")
     servico_ids = request.session.get("agendamento_servicos", [])
-    funcionario = get_object_or_404(Funcionario, id=funcionario_id, ativo=True)
+    shop_slug = request.session.get("shop_slug")
+    funcionario = get_object_or_404(
+        Funcionario, id=funcionario_id, loja__slug=shop_slug, ativo=True
+    )
     servicos = Servico.objects.filter(id__in=servico_ids, profissionais=funcionario, ativo=True)
     duracao_total = sum(s.duracao_minutos for s in servicos)
 

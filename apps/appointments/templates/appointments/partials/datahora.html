@@ -4,7 +4,10 @@
 <form method="post" hx-post="{% url 'appointments:agendamento_datahora' %}" hx-target="#step-container">
   {% csrf_token %}
   <div class="mb-3">
-    {{ form.data.label_tag }} {{ form.data }}
+    {{ form.data.label_tag }}
+    <input type="date" name="data" value="{{ form.data.value|default_if_none:'' }}"
+           hx-get="{% url 'appointments:agendamento_datahora' %}"
+           hx-target="#step-container" hx-trigger="change" hx-push-url="true" />
   </div>
   {% if slots %}
   <div class="mb-3">
