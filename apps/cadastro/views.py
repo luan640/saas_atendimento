@@ -3,8 +3,13 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from .models import Loja, Funcionario, Servico
-from .forms import LojaForm, FuncionarioForm, ServicoForm
+from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal
+from .forms import (
+    LojaForm,
+    FuncionarioForm,
+    ServicoForm,
+    FuncionarioAgendaSemanalFormSet,
+)
 from apps.accounts.decorators import subscription_required
 
 # ========== UTILITÁRIAS ==========
@@ -20,6 +25,16 @@ def _get_loja_ativa(request, lojas_qs):
         except (ValueError, TypeError):
             loja = None
     return loja or lojas_qs.first()
+
+
+def _agenda_formset(instance, data=None):
+    """Cria formset da agenda semanal preenchendo os dias faltantes."""
+    formset = FuncionarioAgendaSemanalFormSet(data=data, instance=instance, prefix="agenda")
+    usados = {f.instance.weekday for f in formset.initial_forms if f.instance.pk}
+    restantes = [d for d in range(7) if d not in usados]
+    for form, dia in zip(formset.extra_forms, restantes):
+        form.initial["weekday"] = dia
+    return formset
 
 def _parse_filtros(request):
     data = request.GET if request.method == 'GET' else request.POST
@@ -173,6 +188,7 @@ def funcionarios(request):
             'lojas': lojas_qs,
             'loja': None,
             'form': FuncionarioForm(lojas=lojas_qs),
+            'formset': _agenda_formset(Funcionario()),
             'funcionarios': []
         }
         if request.headers.get('HX-Request') and target != 'content':
@@ -180,20 +196,26 @@ def funcionarios(request):
         return render(request, 'cadastro/funcionarios.html', ctx)
 
     if request.method == 'POST':
-        form = FuncionarioForm(request.POST, lojas=lojas_qs)
-        if form.is_valid():
-            obj = form.save()
+        func_inst = Funcionario()
+        form = FuncionarioForm(request.POST, lojas=lojas_qs, instance=func_inst)
+        formset = _agenda_formset(func_inst, request.POST)
+        if form.is_valid() and formset.is_valid():
+            func = form.save()
+            formset.instance = func
+            formset.save()
             messages.success(request, 'Funcionário salvo!')
             # reconsulta lista e limpa form
             qs = loja.funcionarios.order_by('nome')
             form = FuncionarioForm(lojas=lojas_qs, initial={'loja': loja})
-            ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'funcionarios': qs}
+            novo_inst = Funcionario(loja=loja)
+            formset = _agenda_formset(novo_inst)
+            ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
             if request.headers.get('HX-Request') and target != 'content':
                 return render(request, 'cadastro/partials/funcionarios.html', ctx)
             return redirect(f"{request.path}?loja_filtro={loja.id}")
 
         qs = loja.funcionarios.order_by('nome')
-        ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'funcionarios': qs}
+        ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
         if request.headers.get('HX-Request') and target != 'content':
             # Retorna o corpo do modal com os erros de validação
             resp = render(request, 'cadastro/funcionarios.html', ctx)
@@ -205,8 +227,10 @@ def funcionarios(request):
 
     # GET
     form = FuncionarioForm(lojas=lojas_qs, initial={'loja': loja})
+    inst = Funcionario(loja=loja)
+    formset = _agenda_formset(inst)
     qs = loja.funcionarios.order_by('nome')
-    ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'funcionarios': qs}
+    ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'cadastro/partials/funcionarios.html', ctx)
     return render(request, 'cadastro/funcionarios.html', ctx)
@@ -227,8 +251,10 @@ def funcionario_edit(request, pk):
 
     if request.method == 'POST':
         form = FuncionarioForm(request.POST, instance=func, lojas=lojas_qs)
-        if form.is_valid():
+        formset = _agenda_formset(func, request.POST)
+        if form.is_valid() and formset.is_valid():
             form.save()
+            formset.save()
             messages.success(request, 'Funcionário atualizado!')
 
             # Recarrega a lista para a loja atualmente filtrada
@@ -240,15 +266,22 @@ def funcionario_edit(request, pk):
             return render(request, 'cadastro/partials/funcionarios.html', ctx)
 
         # Erros de validação → atualizar APENAS o modal
-        resp = render(request, 'cadastro/partials/funcionario_form.html',
-                      {'form': form, 'funcionario': func, 'acao': 'Editar funcionário'})
+        resp = render(
+            request,
+            'cadastro/partials/funcionario_form.html',
+            {'form': form, 'formset': formset, 'funcionario': func, 'acao': 'Editar funcionário'},
+        )
         resp['HX-Retarget'] = '#modalFuncionario .modal-content'
         return resp
 
     # GET → carregamos o conteúdo do modal de edição
     form = FuncionarioForm(instance=func, lojas=lojas_qs)
-    return render(request, 'cadastro/partials/funcionario_form.html',
-                  {'form': form, 'funcionario': func, 'acao': 'Editar funcionário'})
+    formset = _agenda_formset(func)
+    return render(
+        request,
+        'cadastro/partials/funcionario_form.html',
+        {'form': form, 'formset': formset, 'funcionario': func, 'acao': 'Editar funcionário'},
+    )
 
 @login_required
 @subscription_required

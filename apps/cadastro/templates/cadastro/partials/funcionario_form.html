@@ -14,6 +14,7 @@
         hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFuncionarioOps')).hide(); } catch(e) {} }">
     {% csrf_token %}
     {{ form.as_p }}
+    {% include 'cadastro/partials/agenda_formset.html' with formset=formset %}
 
     {% if form and form.errors %}
       <div class="alert alert-danger">

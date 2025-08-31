@@ -1,0 +1,34 @@
+{% if formset %}
+  {{ formset.management_form }}
+  <div class="table-responsive mb-3">
+    <table class="table table-sm">
+      <thead>
+        <tr>
+          <th>Dia</th>
+          <th>Início</th>
+          <th>Fim</th>
+          <th>Almoço início</th>
+          <th>Almoço fim</th>
+          <th>Ativo?</th>
+          {% if formset.can_delete %}<th>Excluir</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for fs in formset.forms %}
+          <tr>
+            <td>
+              {{ fs.id }}
+              {{ fs.weekday }}
+            </td>
+            <td>{{ fs.inicio }}</td>
+            <td>{{ fs.fim }}</td>
+            <td>{{ fs.almoco_inicio }}</td>
+            <td>{{ fs.almoco_fim }}</td>
+            <td>{{ fs.ativo }}</td>
+            {% if formset.can_delete %}<td>{{ fs.DELETE }}</td>{% endif %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
