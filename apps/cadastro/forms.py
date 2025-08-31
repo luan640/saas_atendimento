@@ -173,6 +173,7 @@ FuncionarioAgendaSemanalFormSet = inlineformset_factory(
     Funcionario,
     FuncionarioAgendaSemanal,
     form=FuncionarioAgendaSemanalForm,
-    extra=0,
+    extra=7,
+    max_num=7,
     can_delete=True,
 )

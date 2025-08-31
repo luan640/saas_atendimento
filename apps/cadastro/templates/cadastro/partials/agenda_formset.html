@@ -16,7 +16,10 @@
       <tbody>
         {% for fs in formset.forms %}
           <tr>
-            <td>{{ fs.weekday }}</td>
+            <td>
+              {{ fs.id }}
+              {{ fs.weekday }}
+            </td>
             <td>{{ fs.inicio }}</td>
             <td>{{ fs.fim }}</td>
             <td>{{ fs.almoco_inicio }}</td>

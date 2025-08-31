@@ -26,6 +26,16 @@ def _get_loja_ativa(request, lojas_qs):
             loja = None
     return loja or lojas_qs.first()
 
+
+def _agenda_formset(instance, data=None):
+    """Cria formset da agenda semanal preenchendo os dias faltantes."""
+    formset = FuncionarioAgendaSemanalFormSet(data=data, instance=instance, prefix="agenda")
+    usados = {f.instance.weekday for f in formset.initial_forms if f.instance.pk}
+    restantes = [d for d in range(7) if d not in usados]
+    for form, dia in zip(formset.extra_forms, restantes):
+        form.initial["weekday"] = dia
+    return formset
+
 def _parse_filtros(request):
     data = request.GET if request.method == 'GET' else request.POST
     return {
@@ -178,12 +188,7 @@ def funcionarios(request):
             'lojas': lojas_qs,
             'loja': None,
             'form': FuncionarioForm(lojas=lojas_qs),
-            'formset': FuncionarioAgendaSemanalFormSet(
-                instance=Funcionario(),
-                prefix='agenda',
-                queryset=FuncionarioAgendaSemanal.objects.none(),
-                initial=[{'weekday': i} for i in range(7)],
-            ),
+            'formset': _agenda_formset(Funcionario()),
             'funcionarios': []
         }
         if request.headers.get('HX-Request') and target != 'content':
@@ -193,7 +198,7 @@ def funcionarios(request):
     if request.method == 'POST':
         func_inst = Funcionario()
         form = FuncionarioForm(request.POST, lojas=lojas_qs, instance=func_inst)
-        formset = FuncionarioAgendaSemanalFormSet(request.POST, instance=func_inst, prefix='agenda')
+        formset = _agenda_formset(func_inst, request.POST)
         if form.is_valid() and formset.is_valid():
             func = form.save()
             formset.instance = func
@@ -203,12 +208,7 @@ def funcionarios(request):
             qs = loja.funcionarios.order_by('nome')
             form = FuncionarioForm(lojas=lojas_qs, initial={'loja': loja})
             novo_inst = Funcionario(loja=loja)
-            formset = FuncionarioAgendaSemanalFormSet(
-                instance=novo_inst,
-                prefix='agenda',
-                queryset=FuncionarioAgendaSemanal.objects.none(),
-                initial=[{'weekday': i} for i in range(7)],
-            )
+            formset = _agenda_formset(novo_inst)
             ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
             if request.headers.get('HX-Request') and target != 'content':
                 return render(request, 'cadastro/partials/funcionarios.html', ctx)
@@ -228,12 +228,7 @@ def funcionarios(request):
     # GET
     form = FuncionarioForm(lojas=lojas_qs, initial={'loja': loja})
     inst = Funcionario(loja=loja)
-    formset = FuncionarioAgendaSemanalFormSet(
-        instance=inst,
-        prefix='agenda',
-        queryset=FuncionarioAgendaSemanal.objects.none(),
-        initial=[{'weekday': i} for i in range(7)],
-    )
+    formset = _agenda_formset(inst)
     qs = loja.funcionarios.order_by('nome')
     ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
     if request.headers.get('HX-Request') and target != 'content':
@@ -256,7 +251,7 @@ def funcionario_edit(request, pk):
 
     if request.method == 'POST':
         form = FuncionarioForm(request.POST, instance=func, lojas=lojas_qs)
-        formset = FuncionarioAgendaSemanalFormSet(request.POST, instance=func, prefix='agenda')
+        formset = _agenda_formset(func, request.POST)
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
@@ -281,7 +276,7 @@ def funcionario_edit(request, pk):
 
     # GET → carregamos o conteúdo do modal de edição
     form = FuncionarioForm(instance=func, lojas=lojas_qs)
-    formset = FuncionarioAgendaSemanalFormSet(instance=func, prefix='agenda')
+    formset = _agenda_formset(func)
     return render(
         request,
         'cadastro/partials/funcionario_form.html',
