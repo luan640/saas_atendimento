@@ -2,6 +2,7 @@ from django import forms
 from django.urls import reverse
 from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal
 from apps.accounts.models import Plan, PlanInfo
+from django.forms import inlineformset_factory
 
 
 class LojaForm(forms.ModelForm):
@@ -49,38 +50,14 @@ class LojaForm(forms.ModelForm):
 
         return cleaned
 
+
 class FuncionarioForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
-    dias_semana = forms.MultipleChoiceField(
-        choices=FuncionarioAgendaSemanal.DiaSemana.choices,
-        required=False,
-        widget=forms.CheckboxSelectMultiple,
-        label="Dias da semana",
-    )
     slot_interval_minutes = forms.IntegerField(min_value=1, label="Tempo do slot (minutos)")
 
     class Meta:
         model = Funcionario
-        fields = [
-            "loja",
-            "nome",
-            "cargo",
-            "email",
-            "telefone",
-            "ativo",
-            "dias_semana",
-            "slot_interval_minutes",
-        ]
-        labels = {
-            "nome": "Nome",
-            "cargo": "Cargo",
-            "email": "E-mail",
-            "telefone": "Telefone",
-            "ativo": "Ativo?",
-            "loja": "Loja",
-            "dias_semana": "Dias da semana",
-            "slot_interval_minutes": "Tempo do slot (minutos)",
-        }
+        fields = ["loja", "nome", "cargo", "email", "telefone", "ativo", "slot_interval_minutes"]
         widgets = {
             "nome": forms.TextInput(attrs={"placeholder": "Ex.: Pedro Alves"}),
             "email": forms.EmailInput(attrs={"placeholder": "exemplo@dominio.com"}),
@@ -91,34 +68,51 @@ class FuncionarioForm(forms.ModelForm):
         lojas = kwargs.pop("lojas", Loja.objects.none())
         super().__init__(*args, **kwargs)
         self.fields["loja"].queryset = lojas
-        if self.instance and self.instance.dias_semana:
-            self.initial["dias_semana"] = self.instance.dias_semana.split(",")
 
     def clean(self):
-        cleaned_data = super().clean()
+        cleaned = super().clean()
+        loja = cleaned.get("loja")
+        if not self.instance.pk and loja and hasattr(loja, "owner") and hasattr(loja.owner, "subscription"):
+            limites = PlanInfo.objects.get(plan=loja.owner.subscription.plan)
+            if loja.funcionarios.count() >= limites.max_funcionarios:
+                raise forms.ValidationError(
+                    f"O plano atual permite no máximo {limites.max_funcionarios} funcionário(s) por loja."
+                )
+        return cleaned
 
-        loja = cleaned_data.get("loja")
-        if not self.instance.pk and loja:
-            owner = loja.owner
-            if hasattr(owner, "subscription"):
-                plano_atual = owner.subscription.plan
-                limites = PlanInfo.objects.get(plan=plano_atual)
 
-                qtd_funcionarios = loja.funcionarios.count()
-                if qtd_funcionarios >= limites.max_funcionarios:
-                    raise forms.ValidationError(
-                        f"O plano atual permite no máximo {limites.max_funcionarios} funcionário(s) por loja."
-                    )
+class FuncionarioAgendaSemanalForm(forms.ModelForm):
+    class Meta:
+        model = FuncionarioAgendaSemanal
+        fields = ["weekday", "ativo", "inicio", "fim", "almoco_inicio", "almoco_fim", "slot_interval_minutes"]
+        widgets = {
+            "inicio": forms.TimeInput(attrs={"type": "time"}),
+            "fim": forms.TimeInput(attrs={"type": "time"}),
+            "almoco_inicio": forms.TimeInput(attrs={"type": "time"}),
+            "almoco_fim": forms.TimeInput(attrs={"type": "time"}),
+        }
 
-        return cleaned_data
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("ativo"):
+            ini, fim = cleaned.get("inicio"), cleaned.get("fim")
+            ai, af = cleaned.get("almoco_inicio"), cleaned.get("almoco_fim")
+            if not ini or not fim or ini >= fim:
+                raise forms.ValidationError("Defina início < fim para dias ativos.")
+            if (ai and not af) or (af and not ai):
+                raise forms.ValidationError("Preencha os dois horários de almoço ou deixe ambos vazios.")
+            if ai and af and not (ini < ai < af < fim):
+                raise forms.ValidationError("Almoço deve estar dentro do expediente.")
+        return cleaned
 
-    def save(self, commit=True):
-        inst = super().save(commit=False)
-        dias = self.cleaned_data.get("dias_semana")
-        inst.dias_semana = ",".join(dias) if dias else ""
-        if commit:
-            inst.save()
-        return inst
+FuncionarioAgendaSemanalFormSet = inlineformset_factory(
+    Funcionario,
+    FuncionarioAgendaSemanal,
+    form=FuncionarioAgendaSemanalForm,
+    extra=0,
+    can_delete=False,
+    max_num=7,
+)
 
 class ServicoForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")

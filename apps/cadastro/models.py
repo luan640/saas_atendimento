@@ -70,16 +70,7 @@ class Funcionario(models.Model):
     telefone = models.CharField(max_length=17, blank=True, null=True, validators=[phone_regex])
     slug = models.SlugField(max_length=160, blank=True)
     ativo = models.BooleanField(default=True)
-    dias_semana = models.CharField(
-        max_length=50,
-        blank=True,
-        default="",
-        help_text="Dias da semana que o funcionário atende (0=Segunda ... 6=Domingo), separados por vírgula",
-    )
-    slot_interval_minutes = models.PositiveSmallIntegerField(
-        default=30,
-        help_text="Duração padrão de cada slot de atendimento em minutos",
-    )
+
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 

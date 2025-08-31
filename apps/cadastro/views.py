@@ -4,8 +4,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from .models import Loja, Funcionario, Servico
-from .forms import LojaForm, FuncionarioForm, ServicoForm
+from .forms import LojaForm, FuncionarioForm, ServicoForm, FuncionarioAgendaSemanal, FuncionarioAgendaSemanalFormSet
 from apps.accounts.decorators import subscription_required
+
+from datetime import time
 
 # ========== UTILITÁRIAS ==========
 
@@ -68,6 +70,17 @@ def _aplica_filtros(qs, filtros):
         except ValueError:
             pass
     return qs.distinct()
+
+DEFAULT_INICIO = time(9, 0)
+DEFAULT_FIM    = time(18, 0)
+
+def _seed_7_dias(funcionario: Funcionario):
+    """Garante 1 registro por weekday (0..6). Não altera a lógica existente."""
+    for w in range(7):
+        FuncionarioAgendaSemanal.objects.get_or_create(
+            funcionario=funcionario, weekday=w,
+            defaults={"ativo": False, "inicio": DEFAULT_INICIO, "fim": DEFAULT_FIM}
+        )
 
 # ========== SHOPS ==========
 
@@ -214,41 +227,48 @@ def funcionarios(request):
 @login_required
 @subscription_required
 def funcionario_edit(request, pk):
-    """
-    Edita um funcionário do owner via HTMX, reutilizando o modal #modalFuncionario.
-    Não altera a view `funcionarios`.
-    """
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
 
-    # Lista de lojas do owner e loja ativa conforme filtro atual
     lojas_qs = request.user.lojas.order_by('nome')
     func = get_object_or_404(Funcionario, pk=pk, loja__owner=request.user)
 
+    # garante que existam as 7 linhas antes de renderizar/salvar
+    _seed_7_dias(func)
+
     if request.method == 'POST':
         form = FuncionarioForm(request.POST, instance=func, lojas=lojas_qs)
-        if form.is_valid():
+        formset = FuncionarioAgendaSemanalFormSet(request.POST, instance=func)  # <-- novo
+        if form.is_valid() and formset.is_valid():
             form.save()
+            formset.save()  # <-- novo
             messages.success(request, 'Funcionário atualizado!')
 
-            # Recarrega a lista para a loja atualmente filtrada
             loja = _get_loja_ativa(request, lojas_qs)
             funcionarios_qs = (loja.funcionarios.order_by('nome') if loja else [])
             ctx = {'lojas': lojas_qs, 'loja': loja, 'funcionarios': funcionarios_qs}
-
-            # devolve apenas o <tbody> para substituir na tabela
             return render(request, 'cadastro/partials/funcionarios.html', ctx)
 
-        # Erros de validação → atualizar APENAS o modal
-        resp = render(request, 'cadastro/partials/funcionario_form.html',
-                      {'form': form, 'funcionario': func, 'acao': 'Editar funcionário'})
-        resp['HX-Retarget'] = '#modalFuncionario .modal-content'
+        # Em erro: devolve só o modal atualizado (mantendo seu hx-target original)
+        resp = render(
+            request,
+            'cadastro/partials/funcionario_form.html',
+            {'form': form, 'formset': formset, 'funcionario': func, 'acao': 'Editar funcionário'}
+        )
+        # Força o swap no conteúdo do modal (já que o hx-target aponta para a lista)
+        resp['HX-Retarget'] = '#modalFuncionarioOps .modal-content'
+        resp['HX-Reswap'] = 'outerHTML'
         return resp
 
-    # GET → carregamos o conteúdo do modal de edição
+    # GET: inclui formset no modal
     form = FuncionarioForm(instance=func, lojas=lojas_qs)
-    return render(request, 'cadastro/partials/funcionario_form.html',
-                  {'form': form, 'funcionario': func, 'acao': 'Editar funcionário'})
+    formset = FuncionarioAgendaSemanalFormSet(instance=func)  # <-- novo
+    return render(
+        request,
+        'cadastro/partials/funcionario_form.html',
+        {'form': form, 'formset': formset, 'funcionario': func, 'acao': 'Editar funcionário'}
+    )
+
 
 @login_required
 @subscription_required

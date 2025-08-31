@@ -1,3 +1,4 @@
+{# cadastro/partials/funcionario_form.html #}
 <div class="modal-header">
   <h5 class="modal-title">{{ acao|default:"Editar funcionário" }}</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
@@ -13,7 +14,50 @@
         hx-indicator="#funcionarios-loading"
         hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFuncionarioOps')).hide(); } catch(e) {} }">
     {% csrf_token %}
+
     {{ form.as_p }}
+
+    {# 🔹 BLOCO NOVO: agenda semanal #}
+    {% if formset %}
+      {{ formset.management_form }}
+      <hr>
+      <h6 class="mb-2">Agenda semanal</h6>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Dia</th>
+              <th>Ativo?</th>
+              <th>Início</th>
+              <th>Fim</th>
+              <th>Almoço início</th>
+              <th>Almoço fim</th>
+              <th>Slot (min) opcional</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in formset.forms %}
+              <tr>
+                <td>
+                  {{ f.weekday }}
+                  <small class="text-muted d-block">{{ f.instance.get_weekday_display|default:"" }}</small>
+                </td>
+                <td>{{ f.ativo }}</td>
+                <td>{{ f.inicio }}</td>
+                <td>{{ f.fim }}</td>
+                <td>{{ f.almoco_inicio }}</td>
+                <td>{{ f.almoco_fim }}</td>
+                <td>{{ f.slot_interval_minutes }}</td>
+              </tr>
+              {% if f.non_field_errors %}
+                <tr><td colspan="7" class="text-danger small">{{ f.non_field_errors }}</td></tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+    {# 🔹 FIM DO BLOCO NOVO #}
 
     {% if form and form.errors %}
       <div class="alert alert-danger">
@@ -25,6 +69,15 @@
               <li><strong>{{ field.label }}:</strong> {{ e }}</li>
             {% endfor %}
           {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {# erros de agenda (formset) no bloco geral #}
+    {% if formset and formset.non_form_errors %}
+      <div class="alert alert-danger mt-2">
+        <ul class="mb-0">
+          {% for e in formset.non_form_errors %}<li>{{ e }}</li>{% endfor %}
         </ul>
       </div>
     {% endif %}
