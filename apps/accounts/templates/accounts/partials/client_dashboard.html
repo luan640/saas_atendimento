@@ -31,7 +31,9 @@
           {% endfor %}
         </td>
         <td>
-          {% if ag.confirmado %}
+          {% if ag.no_show %}
+            <span class="badge bg-danger">Não compareceu</span>
+          {% elif ag.confirmado %}
             <span class="badge bg-success">Confirmado</span>
           {% else %}
             <span class="badge bg-warning text-dark">Pendente</span>

@@ -52,7 +52,7 @@
                       <span class="text-muted">—</span>
                     {% endif %}
                   </td>
-                  <td>{% if a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
+                  <td>{% if a.no_show %}Não compareceu{% elif a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
                   <td>
                     <button class="btn btn-sm btn-outline-success"
                             data-bs-toggle="modal"
@@ -110,7 +110,7 @@
                       <span class="text-muted">—</span>
                     {% endif %}
                   </td>
-                  <td>{% if a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
+                  <td>{% if a.no_show %}Não compareceu{% elif a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
                   <td><span class="text-muted">—</span></td>
                 </tr>
                 {% empty %}

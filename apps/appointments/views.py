@@ -227,3 +227,46 @@ def finalizar_agendamento(request, pk):
         {"agendamento": agendamento, "form": form},
         status=400 if request.method == "POST" else 200,
     )
+
+
+@login_required
+def marcar_no_show(request, pk):
+    agendamento = get_object_or_404(Agendamento, pk=pk, loja__owner=request.user)
+
+    if request.method == "POST":
+        agendamento.confirmado = True
+        agendamento.no_show = True
+        agendamento.finalizado_em = timezone.now()
+        agendamento.valor_final = 0
+        agendamento.save(update_fields=["confirmado", "no_show", "finalizado_em", "valor_final"])
+
+        lojas = request.user.lojas.order_by("nome")
+        loja_id = request.POST.get("loja_filtro") or request.POST.get("loja")
+        loja_sel = (
+            get_object_or_404(lojas, pk=loja_id)
+            if loja_id
+            else (lojas.first() if lojas.exists() else None)
+        )
+        base = Agendamento.objects.filter(loja__owner=request.user)
+        if loja_sel:
+            base = base.filter(loja=loja_sel)
+        ctx = {
+            "lojas": lojas,
+            "loja": loja_sel,
+            "pendentes": base.filter(confirmado=False).order_by("criado_em")[:20],
+            "realizados": base.filter(confirmado=True).order_by("-criado_em")[:20],
+            "total_pendentes": base.filter(confirmado=False).count(),
+            "total_realizados": base.filter(confirmado=True).count(),
+        }
+        response = render(
+            request, "accounts/partials/owner_home_agendamentos.html", ctx
+        )
+        response["HX-Retarget"] = "#agendamentos-section"
+        response["HX-Reswap"] = "outerHTML"
+        return response
+
+    return render(
+        request,
+        "appointments/partials/no_show_confirm.html",
+        {"agendamento": agendamento},
+    )

@@ -21,6 +21,7 @@ class Agendamento(models.Model):
 
     criado_em = models.DateTimeField(auto_now_add=True)
     confirmado = models.BooleanField(default=False)
+    no_show = models.BooleanField(default=False)
 
     class FormaPagamento(models.TextChoices):
         PIX = "pix", "PIX"
