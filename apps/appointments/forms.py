@@ -20,10 +20,11 @@ class AgendamentoDataHoraForm(forms.ModelForm):
                 (s.strftime("%H:%M"), s.strftime("%H:%M")) for s in slots
             ]
 
-
 class FinalizarAtendimentoForm(forms.ModelForm):
     servicos = forms.ModelMultipleChoiceField(
-        queryset=Servico.objects.none(), widget=forms.CheckboxSelectMultiple
+        queryset=Servico.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        error_messages={"required": "Selecione pelo menos um serviço."},
     )
 
     class Meta:

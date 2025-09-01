@@ -37,7 +37,7 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     nome = models.CharField(max_length=120, blank=True, null=True)
     sobrenome = models.CharField(max_length=120, blank=True, null=True)
-    grupo = models.SlugField(max_length=150, unique=True, blank=True)  # << slug único para subdomínio
+    grupo = models.SlugField(max_length=150, blank=True)  # << slug único para subdomínio
     email = models.EmailField(unique=True)
 
     # flags de perfil

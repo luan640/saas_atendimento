@@ -5,12 +5,24 @@
 <div class="modal-body">
   <form method="post"
         hx-post="{% url 'appointments:finalizar_agendamento' agendamento.pk %}"
-        hx-target="#agendamentos-section"
-        hx-select="#agendamentos-section"
-        hx-swap="outerHTML"
+        hx-target="#modalShell .modal-content"
+        hx-swap="innerHTML"
         hx-include="#filtro-agendamentos"
         hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShell')).hide(); } catch(e) {} }">
     {% csrf_token %}
+
+    {% if form.errors %}
+      <div class="alert alert-danger">
+        <strong>Erros no formulário:</strong>
+        <ul class="mb-0">
+          {% for field in form %}
+            {% for e in field.errors %}
+              <li><strong>{{ field.label }}:</strong> {{ e }}</li>
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
 
     <div class="mb-3">
       <label class="form-label">Serviços</label>
