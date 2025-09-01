@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta, time
-from typing import List, Tuple
+from datetime import datetime, timedelta, time, date
 from django.utils.timezone import make_aware
-from django.db.models import Q
+from django.utils import timezone
 
 def _time_ranges_minus_lunch(start: time, end: time, lunch_start: time | None, lunch_end: time | None):
     """
@@ -66,14 +65,15 @@ def get_applicable_schedule(funcionario, dia: date):
     return (weekly.inicio, weekly.fim, weekly.almoco_inicio, weekly.almoco_fim, interval, tz)
 
 
-def gerar_slots_disponiveis(funcionario, dia: date, duracao_minutos: int) -> list[datetime]:
+def gerar_slots_disponiveis(funcionario, dia: date) -> list[datetime]:
     """
-    Gera a lista de *inícios de slots* (timezone-aware) onde é possível encaixar um atendimento
-    de `duracao_minutos` para o `funcionario` no dia `dia`.
+    Gera a lista de *inícios de slots* (timezone-aware) disponíveis para o
+    ``funcionario`` no dia ``dia``.
 
     - Respeita agenda semanal, exceções e almoço.
     - Usa intervalo de slot da exceção/semanal/loja, nessa ordem.
-    - Exclui janelas que conflitam com agendamentos existentes.
+    - Considera cada agendamento existente como ocupando apenas o seu slot
+      inicial, independentemente da duração dos serviços.
     """
     sched = get_applicable_schedule(funcionario, dia)
     if not sched:
@@ -83,18 +83,14 @@ def gerar_slots_disponiveis(funcionario, dia: date, duracao_minutos: int) -> lis
     # 1) Constrói janelas do dia (manhã/tarde) excluindo almoço
     windows = _time_ranges_minus_lunch(start_t, end_t, lunch_s, lunch_e)
 
-    # 2) Busca agendamentos existentes para o funcionário no dia (AJUSTE para seu modelo real)
-    # Exemplo assume model Appointment(start_datetime, end_datetime, funcionario, status)
-    from apps.appointment.models import Appointment  # ajuste o import
-    day_start_dt = make_aware(datetime.combine(dia, time.min), timezone=tz)
-    day_end_dt = make_aware(datetime.combine(dia, time.max), timezone=tz)
+    # 2) Busca agendamentos existentes para o funcionário no dia
+    from .models import Agendamento
 
-    # Considera agendamentos não cancelados no dia
-    existing = Appointment.objects.filter(
-        funcionario=funcionario,
-        start_datetime__lt=day_end_dt,
-        end_datetime__gt=day_start_dt,
-    ).exclude(status__in=['cancelado', 'no_show'])
+    existing_qs = Agendamento.objects.filter(funcionario=funcionario, data=dia)
+    existing_starts = {
+        make_aware(datetime.combine(ag.data, ag.hora), timezone=tz)
+        for ag in existing_qs
+    }
 
     # 3) Gera slots brutos e remove os que conflitam
     slots_ok = []
@@ -104,17 +100,8 @@ def gerar_slots_disponiveis(funcionario, dia: date, duracao_minutos: int) -> lis
         w_end = make_aware(datetime.combine(dia, w_end_t), timezone=tz)
 
         for s in _iter_slots(w_start, w_end, step_min):
-            slot_end = s + timedelta(minutes=duracao_minutos)
-            # slot deve caber dentro da janela
-            if slot_end > w_end:
+            if s in existing_starts:
                 continue
-
-            # checa conflito com agendamentos existentes
-            conflita = existing.filter(
-                Q(start_datetime__lt=slot_end) & Q(end_datetime__gt=s)
-            ).exists()
-
-            if not conflita:
-                slots_ok.append(s)
+            slots_ok.append(s)
 
     return slots_ok

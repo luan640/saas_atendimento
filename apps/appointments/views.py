@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -5,6 +7,7 @@ from django.urls import reverse
 from apps.cadastro.models import Loja, Funcionario, Servico
 from .models import Agendamento
 from .forms import AgendamentoDataHoraForm
+from .utils import gerar_slots_disponiveis
 
 @login_required
 def agendamento_start(request):
@@ -70,13 +73,17 @@ def agendamento_servicos(request, funcionario_id):
         # salva os IDs escolhidos na sessão
         request.session["agendamento_servicos"] = selecionados
 
+        servicos_sel = Servico.objects.filter(id__in=selecionados)
+        dia = date.today()
+        slots = gerar_slots_disponiveis(funcionario, dia)
         response = render(
             request,
             "appointments/partials/datahora.html",
             {
                 "funcionario": funcionario,
-                "servicos": Servico.objects.filter(id__in=selecionados),
-                "form": AgendamentoDataHoraForm(),
+                "servicos": servicos_sel,
+                "form": AgendamentoDataHoraForm(initial={"data": dia}, slots=slots),
+                "dia": dia,
             },
         )
         response["HX-Push-Url"] = reverse("appointments:agendamento_datahora")
@@ -108,7 +115,10 @@ def agendamento_datahora(request):
         )
 
     if request.method == "POST":
-        form = AgendamentoDataHoraForm(request.POST)
+        dia_str = request.POST.get("data")
+        dia = date.fromisoformat(dia_str) if dia_str else date.today()
+        slots = gerar_slots_disponiveis(funcionario, dia)
+        form = AgendamentoDataHoraForm(request.POST, slots=slots)
         if form.is_valid():
             ag = form.save(commit=False)
             ag.cliente = request.user
@@ -126,12 +136,20 @@ def agendamento_datahora(request):
             )
             return response
     else:
-        form = AgendamentoDataHoraForm()
+        dia_str = request.GET.get("data")
+        dia = date.fromisoformat(dia_str) if dia_str else date.today()
+        slots = gerar_slots_disponiveis(funcionario, dia)
+        form = AgendamentoDataHoraForm(initial={"data": dia}, slots=slots)
 
     return render(
         request,
         "appointments/partials/datahora.html",
-        {"funcionario": funcionario, "servicos": servicos, "form": form},
+        {
+            "funcionario": funcionario,
+            "servicos": servicos,
+            "form": form,
+            "dia": dia,
+        },
     )
 
 @login_required
