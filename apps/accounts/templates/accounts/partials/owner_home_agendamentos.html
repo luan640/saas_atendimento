@@ -16,18 +16,24 @@
     </form>
   </div>
 
-  <div class="row g-3">
-    <!-- CLIENTES PENDENTES -->
+  <div class="row">
+    <!-- TABELA AGENDAMENTO PENDENTE -->
     <div class="col-md-6">
-      <div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>Pendentes</strong>
-          <span class="badge bg-warning text-dark">{{ total_pendentes }}</span>
-        </div>
-        <div class="card-body p-0">
-          <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
-            <table class="table table-sm table-striped align-middle mb-0">
-              <thead class="table-light sticky-top">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-md-flex align-items-center">
+            <div>
+              <p class="card-subtitle">
+                Pendente
+              </p>
+            </div>
+            <div class="ms-auto mt-3 mt-md-0">
+              <span class="badge bg-warning text-dark">{{ total_pendentes }}</span>
+            </div>
+          </div>
+          <div class="table-responsive mt-4">
+            <table class="table mb-0 text-nowrap varient-table align-middle fs-3">
+              <thead>
                 <tr>
                   <th>Data/Hora</th>
                   <th>Profissional</th>
@@ -67,24 +73,31 @@
                 {% empty %}
                 <tr><td colspan="6" class="text-muted">Sem pendentes.</td></tr>
                 {% endfor %}
+
               </tbody>
             </table>
           </div>
         </div>
       </div>
-    </div><!-- col -->
+    </div>
 
-    <!-- CLIENTES FINALIZADOS -->
+    <!-- TABELA AGENDAMENTO REALIZADO -->
     <div class="col-md-6">
-      <div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>Realizados</strong>
-          <span class="badge bg-success">{{ total_realizados }}</span>
-        </div>
-        <div class="card-body p-0">
-          <div class="table-responsive" style="max-height: 420px; overflow-y: auto;">
-            <table class="table table-sm table-striped align-middle mb-0">
-              <thead class="table-light sticky-top">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-md-flex align-items-center">
+            <div>
+              <p class="card-subtitle">
+                Realizado
+              </p>
+            </div>
+            <div class="ms-auto mt-3 mt-md-0">
+              <span class="badge bg-success">{{ total_realizados }}</span>
+            </div>
+          </div>
+          <div class="table-responsive mt-4">
+            <table class="table mb-0 text-nowrap varient-table align-middle fs-3">
+              <thead>
                 <tr>
                   <th>Data/Hora</th>
                   <th>Profissional</th>
@@ -119,6 +132,7 @@
           </div>
         </div>
       </div>
-    </div><!-- col -->
-  </div><!-- row -->
+    </div>
+  </div>
+
 </div>

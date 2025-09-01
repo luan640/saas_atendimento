@@ -116,4 +116,3 @@ class ClientOTP(models.Model):
 
     def __str__(self):
         return f"OTP {self.phone} expira {self.expires_at:%H:%M:%S}"
-

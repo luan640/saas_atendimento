@@ -1,0 +1,244 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flexy Free Bootstrap Admin Template by WrapPixel</title>
+
+  <script src="https://unpkg.com/htmx.org@1.9.8"></script>
+
+  <link rel="shortcut icon" type="image/png" href="{% static 'images/logos/favicon.png' %}" />
+  <link rel="stylesheet" href="{% static 'css/styles.min.css' %}">
+
+</head>
+
+<body>
+  <!--  Body Wrapper -->
+  <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
+    data-sidebar-position="fixed" data-header-position="fixed">
+
+    <!-- Sidebar Start -->
+    <aside class="left-sidebar">
+      <!-- Sidebar scroll-->
+      <div>
+        <div class="brand-logo d-flex align-items-center justify-content-between">
+          <a href="./index.html" class="text-nowrap logo-img">
+            <img src="{% static 'images/logos/logo.svg' %}" alt="" />
+          </a>
+          <div class="close-btn d-xl-none d-block sidebartoggler cursor-pointer" id="sidebarCollapse">
+            <i class="ti ti-x fs-6"></i>
+          </div>
+        </div>
+        <!-- Sidebar navigation-->
+        <nav class="sidebar-nav scroll-sidebar" data-simplebar="">
+          <ul id="sidebarnav">
+            <li class="nav-small-cap">
+              <iconify-icon icon="solar:menu-dots-linear" class="nav-small-cap-icon fs-4"></iconify-icon>
+              <span class="hide-menu">Home</span>
+            </li>
+            <!-- ---------------------------------- -->
+            <!-- Dashboard -->
+            <!-- ---------------------------------- -->
+            <li class="sidebar-item">
+              <a
+                aria-expanded="false"
+                class="sidebar-link"
+                href="{% url 'accounts:owner_home' %}"
+                hx-get="{% url 'accounts:owner_home' %}"
+                hx-target="#content"
+                hx-select="#content"
+                hx-swap="outerHTML"
+                hx-push-url="true">
+                <i class="ti ti-atom"></i>
+                <span class="hide-menu">Dashboard</span>
+              </a>
+            </li>
+            <!-- ---------------------------------- -->
+            <!-- Sobre -->
+            <!-- ---------------------------------- -->
+            <li class="sidebar-item">
+              <a
+                aria-expanded="false"
+                class="sidebar-link"
+                href="{% url 'accounts:owner_sobre' %}"
+                hx-get="{% url 'accounts:owner_sobre' %}"
+                hx-target="#content"
+                hx-select="#content"
+                hx-swap="outerHTML"
+                hx-push-url="true">
+                <i class="ti ti-atom"></i>
+                <span class="hide-menu">Sobre</span>
+              </a>
+            </li>
+            <!-- ---------------------------------- -->
+            <!-- Cadastros -->
+            <!-- ---------------------------------- -->
+            <li class="sidebar-item">
+              <a class="sidebar-link justify-content-between has-arrow" href="javascript:void(0)" aria-expanded="false">
+                <div class="d-flex align-items-center gap-3">
+                  <span class="d-flex">
+                    <i class="ti ti-basket"></i>
+                  </span>
+                  <span class="hide-menu">Cadastros</span>
+                </div>
+                
+              </a>
+              
+              <ul aria-expanded="false" class="collapse first-level">
+                <li class="sidebar-item">
+                  <a
+                    aria-expanded="false"
+                    class="sidebar-link"
+                    href="{% url 'cadastro:owner_shops' %}"
+                    hx-get="{% url 'cadastro:owner_shops' %}"
+                    hx-target="#content"
+                    hx-select="#content"
+                    hx-swap="outerHTML"
+                    hx-push-url="true">
+                    <i class="ti ti-atom"></i>
+                    <span class="hide-menu">Lojas</span>
+                  </a>
+                </li>
+                <li class="sidebar-item">
+                <a
+                    aria-expanded="false"
+                    class="sidebar-link"
+                    href="{% url 'cadastro:funcionarios' %}"
+                    hx-get="{% url 'cadastro:funcionarios' %}"
+                    hx-target="#content"
+                    hx-select="#content"
+                    hx-swap="outerHTML"
+                    hx-push-url="true">
+                    <i class="ti ti-atom"></i>
+                    <span class="hide-menu">Funcionários</span>
+                  </a>
+                </li>
+                <li class="sidebar-item">
+                  <a
+                    aria-expanded="false"
+                    class="sidebar-link"
+                    href="{% url 'cadastro:servicos' %}"
+                    hx-get="{% url 'cadastro:servicos' %}"
+                    hx-target="#content"
+                    hx-select="#content"
+                    hx-swap="outerHTML"
+                    hx-push-url="true">
+                    <i class="ti ti-atom"></i>
+                    <span class="hide-menu">Serviços</span>
+                  </a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </nav>
+        <!-- End Sidebar navigation -->
+      </div>
+      <!-- End Sidebar scroll-->
+    </aside>
+    <!--  Sidebar End -->
+    <!--  Main wrapper -->
+    <div class="body-wrapper" id='content' hx-history-elt>
+      <!--  Header Start -->
+      <header class="app-header">
+        <nav class="navbar navbar-expand-lg navbar-light">
+          <ul class="navbar-nav">
+            <li class="nav-item d-block d-xl-none">
+              <a class="nav-link sidebartoggler " id="headerCollapse" href="javascript:void(0)">
+                <i class="ti ti-menu-2"></i>
+              </a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link " href="javascript:void(0)" id="drop1" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="ti ti-bell"></i>
+                <div class="notification bg-primary rounded-circle"></div>
+              </a>
+              <div class="dropdown-menu dropdown-menu-animate-up" aria-labelledby="drop1">
+                <div class="message-body">
+                  <a href="javascript:void(0)" class="dropdown-item">
+                    Item 1
+                  </a>
+                  <a href="javascript:void(0)" class="dropdown-item">
+                    Item 2
+                  </a>
+                </div>
+              </div>
+            </li>
+          </ul>
+          <div class="navbar-collapse justify-content-end px-0" id="navbarNav">
+            <ul class="navbar-nav flex-row ms-auto align-items-center justify-content-end">
+               
+              <li class="nav-item dropdown">
+                <a class="nav-link " href="javascript:void(0)" id="drop2" data-bs-toggle="dropdown"
+                  aria-expanded="false">
+                  <img src="{% static 'images/profile/user-1.jpg' %}" alt="" width="35" height="35" class="rounded-circle">
+                </a>
+                <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
+                  <div class="message-body">
+                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
+                      <i class="ti ti-user fs-6"></i>
+                      <p class="mb-0 fs-3">My Profile</p>
+                    </a>
+                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
+                      <i class="ti ti-mail fs-6"></i>
+                      <p class="mb-0 fs-3">My Account</p>
+                    </a>
+                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
+                      <i class="ti ti-list-check fs-6"></i>
+                      <p class="mb-0 fs-3">My Task</p>
+                    </a>
+                    <a href="{% url 'accounts:owner_logout' %}" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </nav>
+      </header>
+      <!--  Header End -->
+      <div class="body-wrapper-inner">
+        <div class="container-fluid">
+          {% block content %}
+          {% endblock %}
+          
+          <!-- Enhanced modal with better sizing options -->
+          <div class="modal fade" id="modalShell" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content"></div>
+            </div>
+          </div>
+
+          <!-- Added large modal for complex forms -->
+          <div class="modal fade" id="modalShellLarge" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+              <div class="modal-content"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{% static 'libs/jquery/dist/jquery.min.js' %}"></script>
+  <script src="{% static 'libs/bootstrap/dist/js/bootstrap.bundle.min.js' %}"></script>
+  
+  <script src="{% static 'js/sidebarmenu.js' %}"></script>
+  <script src="{% static 'js/app.min.js' %}"></script>
+  <script src="{% static 'js/dashboard.js' %}"></script>
+
+  <!-- solar icons -->
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
+
+  <script>
+    document.body.addEventListener("htmx:targetError", function(evt) {
+      console.error("HTMX target error:", evt.detail);
+    });
+    document.body.addEventListener("htmx:syntax:error", function(evt) {
+      console.error("HTMX target error:", evt.detail);
+    });
+  </script>
+</body>
+
+</html>
