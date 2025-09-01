@@ -5,9 +5,8 @@
 <div class="modal-body">
   <form method="post"
         hx-post="{% url 'appointments:finalizar_agendamento' agendamento.pk %}"
-        hx-target="#agendamentos-section"
-        hx-select="#agendamentos-section"
-        hx-swap="outerHTML"
+        hx-target="#modalShell .modal-content"
+        hx-swap="innerHTML"
         hx-include="#filtro-agendamentos"
         hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShell')).hide(); } catch(e) {} }">
     {% csrf_token %}

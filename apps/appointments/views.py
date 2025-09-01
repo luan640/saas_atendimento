@@ -209,7 +209,12 @@ def finalizar_agendamento(request, pk):
                 "total_pendentes": base.filter(confirmado=False).count(),
                 "total_realizados": base.filter(confirmado=True).count(),
             }
-            return render(request, "accounts/partials/owner_home_agendamentos.html", ctx)
+            response = render(
+                request, "accounts/partials/owner_home_agendamentos.html", ctx
+            )
+            response["HX-Retarget"] = "#agendamentos-section"
+            response["HX-Reswap"] = "outerHTML"
+            return response
     else:
         total = agendamento.servicos.aggregate(total=Sum("preco"))["total"] or 0
         form = FinalizarAtendimentoForm(
@@ -220,4 +225,5 @@ def finalizar_agendamento(request, pk):
         request,
         "appointments/partials/finalizar_agendamento.html",
         {"agendamento": agendamento, "form": form},
+        status=400 if request.method == "POST" else 200,
     )
