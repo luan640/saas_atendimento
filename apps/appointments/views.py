@@ -74,9 +74,8 @@ def agendamento_servicos(request, funcionario_id):
         request.session["agendamento_servicos"] = selecionados
 
         servicos_sel = Servico.objects.filter(id__in=selecionados)
-        duracao = sum(s.duracao_minutos for s in servicos_sel)
         dia = date.today()
-        slots = gerar_slots_disponiveis(funcionario, dia, duracao)
+        slots = gerar_slots_disponiveis(funcionario, dia)
         response = render(
             request,
             "appointments/partials/datahora.html",
@@ -107,7 +106,6 @@ def agendamento_datahora(request):
     servico_ids = request.session.get("agendamento_servicos", [])
     funcionario = get_object_or_404(Funcionario, id=funcionario_id, ativo=True)
     servicos = Servico.objects.filter(id__in=servico_ids, profissionais=funcionario, ativo=True)
-    duracao_total = sum(s.duracao_minutos for s in servicos)
 
     if not request.headers.get("HX-Request") and request.method == "GET":
         return render(
@@ -119,7 +117,7 @@ def agendamento_datahora(request):
     if request.method == "POST":
         dia_str = request.POST.get("data")
         dia = date.fromisoformat(dia_str) if dia_str else date.today()
-        slots = gerar_slots_disponiveis(funcionario, dia, duracao_total)
+        slots = gerar_slots_disponiveis(funcionario, dia)
         form = AgendamentoDataHoraForm(request.POST, slots=slots)
         if form.is_valid():
             ag = form.save(commit=False)
@@ -140,7 +138,7 @@ def agendamento_datahora(request):
     else:
         dia_str = request.GET.get("data")
         dia = date.fromisoformat(dia_str) if dia_str else date.today()
-        slots = gerar_slots_disponiveis(funcionario, dia, duracao_total)
+        slots = gerar_slots_disponiveis(funcionario, dia)
         form = AgendamentoDataHoraForm(initial={"data": dia}, slots=slots)
 
     return render(

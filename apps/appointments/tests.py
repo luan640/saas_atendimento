@@ -35,7 +35,7 @@ class SlotDisponivelTests(TestCase):
         self.servico.profissionais.add(self.funcionario)
 
     def test_gerar_slots_sem_agendamentos(self):
-        slots = gerar_slots_disponiveis(self.funcionario, date(2024, 1, 1), 30)
+        slots = gerar_slots_disponiveis(self.funcionario, date(2024, 1, 1))
         horas = [s.time() for s in slots]
         self.assertEqual(horas, [time(9, 0), time(9, 30)])
 
@@ -50,6 +50,24 @@ class SlotDisponivelTests(TestCase):
         ag.servicos.add(self.servico)
         ag.refresh_from_db()
         self.assertEqual(ag.duracao_total_minutos, 30)
-        slots = gerar_slots_disponiveis(self.funcionario, date(2024, 1, 1), 30)
+        slots = gerar_slots_disponiveis(self.funcionario, date(2024, 1, 1))
+        horas = [s.time() for s in slots]
+        self.assertEqual(horas, [time(9, 30)])
+
+    def test_agendamento_longo_ocupa_apenas_um_slot(self):
+        servico_longo = Servico.objects.create(
+            loja=self.loja, nome="Corte longo", duracao_minutos=90, preco=30
+        )
+        servico_longo.profissionais.add(self.funcionario)
+        ag = self.funcionario.agendamentos.create(
+            cliente=self.owner,
+            loja=self.loja,
+            data=date(2024, 1, 1),
+            hora=time(9, 0),
+        )
+        ag.servicos.add(servico_longo)
+        ag.refresh_from_db()
+        self.assertEqual(ag.duracao_total_minutos, 90)
+        slots = gerar_slots_disponiveis(self.funcionario, date(2024, 1, 1))
         horas = [s.time() for s in slots]
         self.assertEqual(horas, [time(9, 30)])
