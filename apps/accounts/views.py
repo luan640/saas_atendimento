@@ -86,6 +86,9 @@ def owner_home_agendamentos(request):
     pendentes = base.filter(confirmado=False).order_by('criado_em')[:20]
     realizados = base.filter(confirmado=True).order_by('-criado_em')[:20]
 
+    for a in realizados:
+        print(a.cliente.full_name)
+
     ctx = {
         'lojas': lojas,
         'loja': loja_sel,
@@ -166,7 +169,6 @@ def client_verify(request):
             if not otp:
                 messages.error(request, 'Código inválido ou expirado.')
             else:
-                # (opcional) recuperar nome salvo na etapa anterior
                 full_name = request.session.get('pending_full_name') or 'Cliente'
 
                 user, _ = User.objects.get_or_create(
@@ -176,8 +178,13 @@ def client_verify(request):
                         'is_client': True,
                         'is_owner': False,
                         'full_name': full_name,
+                        'grupo': 'cliente',
+                        'username': f'{full_name}_{phone}',
                     }
                 )
+
+                print("aq")
+
                 if not user.is_client:
                     user.is_client = True
                     user.save(update_fields=['is_client'])

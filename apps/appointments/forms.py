@@ -20,7 +20,6 @@ class AgendamentoDataHoraForm(forms.ModelForm):
                 (s.strftime("%H:%M"), s.strftime("%H:%M")) for s in slots
             ]
 
-
 class FinalizarAtendimentoForm(forms.ModelForm):
     servicos = forms.ModelMultipleChoiceField(
         queryset=Servico.objects.none(),

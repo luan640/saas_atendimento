@@ -17,6 +17,7 @@
   </div>
 
   <div class="row g-3">
+    <!-- CLIENTES PENDENTES -->
     <div class="col-md-6">
       <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -40,8 +41,8 @@
                 {% for a in pendentes %}
                 <tr>
                   <td>{{ a.data|date:"d/m/Y" }} {{ a.hora|time:"H:i" }}</td>
-                  <td>{{ a.funcionario }}</td>
-                  <td>{{ a.cliente|default:"—" }}</td>
+                  <td>{{ a.funcionario.nome }}</td>
+                  <td>{{ a.cliente.full_name }}</td>
                   <td>
                     {% if a.servicos.all %}
                       {% for s in a.servicos.all %}
@@ -73,6 +74,7 @@
       </div>
     </div><!-- col -->
 
+    <!-- CLIENTES FINALIZADOS -->
     <div class="col-md-6">
       <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -96,8 +98,8 @@
                 {% for a in realizados %}
                 <tr>
                   <td>{{ a.data|date:"d/m/Y" }} {{ a.hora|time:"H:i" }}</td>
-                  <td>{{ a.funcionario }}</td>
-                  <td>{{ a.cliente|default:"—" }}</td>
+                  <td>{{ a.funcionario.nome }}</td>
+                  <td>{{ a.cliente.full_name }}</td>
                   <td>
                     {% if a.servicos.all %}
                       {% for s in a.servicos.all %}

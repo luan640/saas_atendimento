@@ -173,7 +173,6 @@ def agendamento_confirmacao(request, agendamento_id):
         },
     )
 
-
 @login_required
 def finalizar_agendamento(request, pk):
     agendamento = get_object_or_404(Agendamento, pk=pk, loja__owner=request.user)

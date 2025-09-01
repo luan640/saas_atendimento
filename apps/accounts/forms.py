@@ -20,6 +20,7 @@ class OwnerLoginForm(forms.Form):
 class ClientStartForm(forms.Form):
     full_name = forms.CharField(label="Seu nome", max_length=120)
     phone = forms.CharField(label="Telefone (ex.: +5585...)")
+    username = f'{full_name}_{phone}'
 
 class ClientVerifyForm(forms.Form):
     phone = forms.CharField(widget=forms.HiddenInput())
