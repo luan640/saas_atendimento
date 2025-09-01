@@ -1,0 +1,22 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Sobre{% endblock %}
+
+{% block content %}
+<h4 class="mb-3">Bem-vindo, {{ request.user.email }}, Sobre sua conta.</h4>
+
+{% if subscription %}
+  <p>Plano atual: <strong>{{ subscription.get_plan_display }}</strong></p>
+  <p>Vigência: {{ subscription.start_date|date:'d/m/Y H:i' }} até
+     <strong>{{ subscription.end_date|date:'d/m/Y H:i' }}</strong></p>
+  <p>Status:
+    {% if subscription.is_active %}
+      <span class="badge bg-success">Ativa</span>
+    {% else %}
+      <span class="badge bg-danger">Expirada</span>
+    {% endif %}
+  </p>
+{% else %}
+  <div class="alert alert-warning">Sem assinatura vinculada.</div>
+{% endif %}
+
+{% endblock %}

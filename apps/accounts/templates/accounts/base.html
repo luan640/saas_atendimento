@@ -27,6 +27,15 @@
             hx-swap="outerHTML"
             hx-push-url="true"
           >Home</a>
+          <a
+            class="nav-link text-white"
+            href="{% url 'accounts:owner_sobre' %}"
+            hx-get="{% url 'accounts:owner_sobre' %}"
+            hx-target="#content"
+            hx-select="#content"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >Sobre</a>
         </li>
         <li class="nav-item">
           <button class="nav-link text-white w-100 text-start" data-bs-toggle="collapse" data-bs-target="#cadastros-menu" aria-expanded="false">

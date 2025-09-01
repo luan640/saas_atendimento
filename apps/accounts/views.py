@@ -80,6 +80,18 @@ def owner_home(request):
 
 @login_required
 @subscription_required
+def owner_sobre(request):
+    sub = getattr(request.user, 'subscription', None)
+    ctx = {
+        'subscription': sub,
+    }
+    # target = request.headers.get('HX-Target')
+    # if request.headers.get('HX-Request') and target != 'content':
+    #     return render(request, 'accounts/partials/sobre.html', ctx)
+    return render(request, 'accounts/sobre.html', ctx)
+
+@login_required
+@subscription_required
 def owner_home_agendamentos(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
