@@ -3,10 +3,12 @@ from datetime import date
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+from django.utils import timezone
+from django.db.models import Sum
 
 from apps.cadastro.models import Loja, Funcionario, Servico
 from .models import Agendamento
-from .forms import AgendamentoDataHoraForm
+from .forms import AgendamentoDataHoraForm, FinalizarAtendimentoForm
 from .utils import gerar_slots_disponiveis
 
 @login_required
@@ -169,4 +171,51 @@ def agendamento_confirmacao(request, agendamento_id):
                 "appointments:agendamento_confirmacao", args=[agendamento.id]
             )
         },
+    )
+
+
+@login_required
+def finalizar_agendamento(request, pk):
+    agendamento = get_object_or_404(Agendamento, pk=pk, loja__owner=request.user)
+
+    if request.method == "POST":
+        form = FinalizarAtendimentoForm(
+            request.POST, instance=agendamento, loja=agendamento.loja
+        )
+        if form.is_valid():
+            ag = form.save(commit=False)
+            ag.confirmado = True
+            ag.finalizado_em = timezone.now()
+            ag.save()
+            form.save_m2m()
+
+            lojas = request.user.lojas.order_by("nome")
+            loja_id = request.POST.get("loja_filtro") or request.POST.get("loja")
+            loja_sel = (
+                get_object_or_404(lojas, pk=loja_id)
+                if loja_id
+                else (lojas.first() if lojas.exists() else None)
+            )
+            base = Agendamento.objects.filter(loja__owner=request.user)
+            if loja_sel:
+                base = base.filter(loja=loja_sel)
+            ctx = {
+                "lojas": lojas,
+                "loja": loja_sel,
+                "pendentes": base.filter(confirmado=False).order_by("criado_em")[:20],
+                "realizados": base.filter(confirmado=True).order_by("-criado_em")[:20],
+                "total_pendentes": base.filter(confirmado=False).count(),
+                "total_realizados": base.filter(confirmado=True).count(),
+            }
+            return render(request, "accounts/partials/owner_home_agendamentos.html", ctx)
+    else:
+        total = agendamento.servicos.aggregate(total=Sum("preco"))["total"] or 0
+        form = FinalizarAtendimentoForm(
+            instance=agendamento, loja=agendamento.loja, initial={"valor_final": total}
+        )
+
+    return render(
+        request,
+        "appointments/partials/finalizar_agendamento.html",
+        {"agendamento": agendamento, "form": form},
     )

@@ -18,3 +18,14 @@ class AgendamentoDataHoraForm(forms.ModelForm):
             self.fields["hora"].choices = [
                 (s.strftime("%H:%M"), s.strftime("%H:%M")) for s in slots
             ]
+
+
+class FinalizarAtendimentoForm(forms.ModelForm):
+    class Meta:
+        model = Agendamento
+        fields = ["funcionario", "valor_final", "teve_desconto", "forma_pagamento"]
+
+    def __init__(self, *args, loja=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if loja is not None:
+            self.fields["funcionario"].queryset = loja.funcionarios.all()

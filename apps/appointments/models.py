@@ -22,6 +22,21 @@ class Agendamento(models.Model):
     criado_em = models.DateTimeField(auto_now_add=True)
     confirmado = models.BooleanField(default=False)
 
+    class FormaPagamento(models.TextChoices):
+        PIX = "pix", "PIX"
+        DEBITO = "debito", "Débito"
+        DINHEIRO = "dinheiro", "Dinheiro"
+        CREDITO = "credito", "Cartão de Crédito"
+
+    valor_final = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    teve_desconto = models.BooleanField(default=False)
+    forma_pagamento = models.CharField(
+        max_length=20, choices=FormaPagamento.choices, blank=True, null=True
+    )
+    finalizado_em = models.DateTimeField(blank=True, null=True)
+
     def __str__(self):
         nomes = ", ".join(s.nome for s in self.servicos.all()[:3])
         if self.servicos.count() > 3:
