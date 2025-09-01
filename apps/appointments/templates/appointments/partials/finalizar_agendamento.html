@@ -60,6 +60,11 @@
 
     <div class="d-flex justify-content-end gap-2">
       <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+      <button type="button"
+              class="btn btn-outline-danger"
+              hx-get="{% url 'appointments:marcar_no_show' agendamento.pk %}"
+              hx-target="#modalShell .modal-content"
+              hx-swap="innerHTML">Não compareceu</button>
       <button type="submit" class="btn btn-primary">Finalizar</button>
     </div>
   </form>

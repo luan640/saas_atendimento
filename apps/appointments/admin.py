@@ -12,9 +12,10 @@ class AgendamentoAdmin(admin.ModelAdmin):
         "data",
         "hora",
         "confirmado",
+        "no_show",
         "criado_em",
     )
-    list_filter = ("loja", "funcionario", "servicos", "confirmado", "data")
+    list_filter = ("loja", "funcionario", "servicos", "confirmado", "no_show", "data")
     search_fields = (
         "cliente__full_name",
         "cliente__email",
@@ -26,7 +27,7 @@ class AgendamentoAdmin(admin.ModelAdmin):
     ordering = ("-data", "-hora")
     date_hierarchy = "data"
     autocomplete_fields = ("cliente", "loja", "servicos")
-    list_editable = ("confirmado",)
+    list_editable = ("confirmado", "no_show")
 
     def lista_servicos(self, obj):
         return ", ".join(s.nome for s in obj.servicos.all()[:3]) + (
