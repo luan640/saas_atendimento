@@ -184,6 +184,8 @@ def finalizar_agendamento(request, pk):
         )
         if form.is_valid():
             ag = form.save(commit=False)
+            total = form.cleaned_data["servicos"].aggregate(total=Sum("preco"))["total"] or 0
+            ag.valor_final = total
             ag.confirmado = True
             ag.finalizado_em = timezone.now()
             ag.save()

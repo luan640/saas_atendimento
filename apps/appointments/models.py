@@ -35,6 +35,7 @@ class Agendamento(models.Model):
     forma_pagamento = models.CharField(
         max_length=20, choices=FormaPagamento.choices, blank=True, null=True
     )
+    observacao = models.TextField(blank=True)
     finalizado_em = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
