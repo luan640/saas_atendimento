@@ -22,5 +22,10 @@ urlpatterns = [
     path('servicos/<int:pk>/edit/', views.servico_edit, name='servico_edit'),
     path('servicos/<int:pk>/delete/', views.servico_delete, name='servico_delete'),
 
+    # ======== CLIENTES ========
+    path('clientes/', views.clientes, name='clientes'),
+    path('clientes/<int:pk>/edit/', views.cliente_edit, name='cliente_edit'),
+    path('clientes/<int:pk>/delete/', views.cliente_delete, name='cliente_delete'),
+
     path('<slug:slug>/', client_start_loja, name='client_start_loja'),
 ]

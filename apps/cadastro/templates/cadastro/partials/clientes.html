@@ -1,0 +1,27 @@
+<tbody id="clientes-tbody">
+  {% for c in clientes %}
+  <tr>
+    <td>{{ c.user.full_name|default:c.user.email }}</td>
+    <td>{{ c.user.email }}</td>
+    <td>{{ c.user.phone|default:"—" }}</td>
+    <td class="text-end">
+      <button class="btn btn-sm btn-outline-primary"
+              hx-get="{% url 'cadastro:cliente_edit' c.pk %}"
+              hx-target="#modalClienteOps .modal-content"
+              hx-swap="innerHTML"
+              hx-on="htmx:afterOnLoad: (function(){ const m=document.getElementById('modalClienteOps'); if(m){ bootstrap.Modal.getOrCreateInstance(m).show(); } })()">
+        Editar
+      </button>
+      <button class="btn btn-sm btn-outline-danger"
+              hx-get="{% url 'cadastro:cliente_delete' c.pk %}"
+              hx-target="#modalClienteOps .modal-content"
+              hx-swap="innerHTML"
+              hx-on="htmx:afterOnLoad: (function(){ const m=document.getElementById('modalClienteOps'); if(m){ bootstrap.Modal.getOrCreateInstance(m).show(); } })()">
+        Excluir
+      </button>
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="4" class="text-muted">Nenhum cliente ainda.</td></tr>
+  {% endfor %}
+</tbody>

@@ -120,12 +120,12 @@
                   <span class="loading-indicator spinner-border spinner-border-sm ms-auto" role="status"></span>
                 </a>
               </li>
-              <!-- Added Clientes submenu item -->
+              <!-- Clientes submenu item -->
               <li class="nav-item">
                 <a
                   class="nav-link text-white d-flex align-items-center"
-                  href="#"
-                  hx-get="#"
+                  href="{% url 'cadastro:clientes' %}"
+                  hx-get="{% url 'cadastro:clientes' %}"
                   hx-target="#content"
                   hx-select="#content"
                   hx-swap="outerHTML"

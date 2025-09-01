@@ -1,0 +1,19 @@
+<div class="modal-header">
+  <h5 class="modal-title">Excluir cliente</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+</div>
+<div class="modal-body">
+  <p>Tem certeza que deseja excluir {{ cliente.user.full_name|default:cliente.user.email }}?</p>
+  <form method="post"
+        hx-post="{% url 'cadastro:cliente_delete' cliente.pk %}"
+        hx-target="#clientes-tbody"
+        hx-select="#clientes-tbody"
+        hx-swap="outerHTML"
+        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalClienteOps')).hide(); } catch(e) {} }">
+    {% csrf_token %}
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+      <button type="submit" class="btn btn-danger">Excluir</button>
+    </div>
+  </form>
+</div>

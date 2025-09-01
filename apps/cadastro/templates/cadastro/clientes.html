@@ -1,0 +1,67 @@
+{% extends 'accounts/index.html' %}
+{% block title %}Clientes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="m-0">Clientes</h3>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCliente">
+    Novo cliente
+  </button>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th class="text-end">Ações</th></tr>
+    </thead>
+    {% include 'cadastro/partials/clientes.html' %}
+  </table>
+</div>
+
+<!-- Modal add cliente -->
+<div class="modal fade" id="modalCliente" tabindex="-1" aria-labelledby="modalClienteLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalClienteLabel">Novo cliente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="modal-cliente-body">
+        <form method="post"
+              hx-post="{% url 'cadastro:clientes' %}"
+              hx-target="#clientes-tbody"
+              hx-select="#clientes-tbody"
+              hx-swap="outerHTML"
+              hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCliente')).hide(); } catch(e) {} }">
+          {% csrf_token %}
+          {{ form.as_p }}
+          {% if form and form.errors %}
+            <div class="alert alert-danger">
+              <strong>Erros no formulário:</strong>
+              <ul class="mb-0">
+                {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
+                {% for field in form %}
+                  {% for e in field.errors %}
+                    <li><strong>{{ field.label }}:</strong> {{ e }}</li>
+                  {% endfor %}
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal exclusivo para Editar/Excluir cliente -->
+<div class="modal fade" id="modalClienteOps" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content"></div>
+  </div>
+</div>
+{% endblock %}

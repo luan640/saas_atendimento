@@ -2,7 +2,7 @@ from django import forms
 from django.urls import reverse
 from django.forms import inlineformset_factory
 from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal
-from apps.accounts.models import Plan, PlanInfo
+from apps.accounts.models import Plan, PlanInfo, User
 
 
 class LojaForm(forms.ModelForm):
@@ -49,6 +49,31 @@ class LojaForm(forms.ModelForm):
                     )
 
         return cleaned
+
+
+class ClienteForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ["full_name", "email", "phone"]
+        labels = {
+            "full_name": "Nome",
+            "email": "E-mail",
+            "phone": "Telefone",
+        }
+        widgets = {
+            "phone": forms.TextInput(attrs={"placeholder": "+5585..."}),
+        }
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if not user.username:
+            user.username = user.email
+        user.is_client = True
+        if commit:
+            if not user.pk:
+                user.set_unusable_password()
+            user.save()
+        return user
 
 class FuncionarioForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
