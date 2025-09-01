@@ -86,9 +86,6 @@ def owner_home_agendamentos(request):
     pendentes = base.filter(confirmado=False).order_by('criado_em')[:20]
     realizados = base.filter(confirmado=True).order_by('-criado_em')[:20]
 
-    for a in realizados:
-        print(a.cliente.full_name)
-
     ctx = {
         'lojas': lojas,
         'loja': loja_sel,
@@ -182,8 +179,6 @@ def client_verify(request):
                         'username': f'{full_name}_{phone}',
                     }
                 )
-
-                print("aq")
 
                 if not user.is_client:
                     user.is_client = True

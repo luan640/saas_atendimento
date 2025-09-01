@@ -93,7 +93,6 @@ class Funcionario(models.Model):
         unique_together = (('loja', 'slug'),)
         ordering = ('nome',)
 
-# --- CONFIG POR LOJA (define o intervalo padrão dos slots) ---
 class LojaAgendamentoConfig(models.Model):
     loja = models.OneToOneField('Loja', on_delete=models.CASCADE, related_name='agendamento_config')
     slot_interval_minutes = models.PositiveSmallIntegerField(
@@ -108,7 +107,6 @@ class LojaAgendamentoConfig(models.Model):
     def __str__(self):
         return f'Config agendamento – {self.loja.nome} ({self.slot_interval_minutes} min)'
 
-# --- AGENDA SEMANAL DO FUNCIONÁRIO ---
 class FuncionarioAgendaSemanal(models.Model):
     class DiaSemana(models.IntegerChoices):
         SEGUNDA = 0, 'Segunda'
@@ -152,7 +150,6 @@ class FuncionarioAgendaSemanal(models.Model):
         ds = self.get_weekday_display()
         return f'{self.funcionario.nome} – {ds} {self.inicio}-{self.fim}'
 
-# --- EXCEÇÕES ESPECÍFICAS POR DATA ---
 class FuncionarioAgendaExcecao(models.Model):
     """
     Permite ajustar um dia específico:

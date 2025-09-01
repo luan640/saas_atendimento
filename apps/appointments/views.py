@@ -141,6 +141,7 @@ def agendamento_datahora(request):
         dia_str = request.GET.get("data")
         dia = date.fromisoformat(dia_str) if dia_str else date.today()
         slots = gerar_slots_disponiveis(funcionario, dia)
+        
         form = AgendamentoDataHoraForm(initial={"data": dia}, slots=slots)
 
     return render(

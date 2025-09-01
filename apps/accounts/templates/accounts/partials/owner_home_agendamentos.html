@@ -42,7 +42,7 @@
                 <tr>
                   <td>{{ a.data|date:"d/m/Y" }} {{ a.hora|time:"H:i" }}</td>
                   <td>{{ a.funcionario.nome }}</td>
-                  <td>{{ a.cliente.full_name }}</td>
+                  <td>{{ a.cliente.full_name }} - {{a.cliente.phone}}
                   <td>
                     {% if a.servicos.all %}
                       {% for s in a.servicos.all %}
@@ -99,7 +99,8 @@
                 <tr>
                   <td>{{ a.data|date:"d/m/Y" }} {{ a.hora|time:"H:i" }}</td>
                   <td>{{ a.funcionario.nome }}</td>
-                  <td>{{ a.cliente.full_name }}</td>
+                  <td>{{ a.cliente.full_name }} - {{a.cliente.phone}}
+                  </td>
                   <td>
                     {% if a.servicos.all %}
                       {% for s in a.servicos.all %}

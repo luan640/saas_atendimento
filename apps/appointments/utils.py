@@ -74,6 +74,7 @@ def gerar_slots_disponiveis(funcionario, dia: date) -> list[datetime]:
     - Usa intervalo de slot da exceção/semanal/loja, nessa ordem.
     - Considera cada agendamento existente como ocupando apenas o seu slot
       inicial, independentemente da duração dos serviços.
+    - Retorna apenas slots maiores que data e hora atual.
     """
     sched = get_applicable_schedule(funcionario, dia)
     if not sched:
@@ -92,15 +93,16 @@ def gerar_slots_disponiveis(funcionario, dia: date) -> list[datetime]:
         for ag in existing_qs
     }
 
-    # 3) Gera slots brutos e remove os que conflitam
+    # 3) Gera slots brutos e remove os que conflitam e que são menores ou iguais ao momento atual
     slots_ok = []
+    now = timezone.now().astimezone(tz)
 
     for w_start_t, w_end_t in windows:
         w_start = make_aware(datetime.combine(dia, w_start_t), timezone=tz)
         w_end = make_aware(datetime.combine(dia, w_end_t), timezone=tz)
 
         for s in _iter_slots(w_start, w_end, step_min):
-            if s in existing_starts:
+            if s in existing_starts or s <= now:
                 continue
             slots_ok.append(s)
 
