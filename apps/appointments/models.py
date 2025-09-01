@@ -1,5 +1,8 @@
 from django.db import models
 from django.conf import settings
+from django.db.models import Sum
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
 
 class Agendamento(models.Model):
     cliente = models.ForeignKey(
@@ -10,6 +13,8 @@ class Agendamento(models.Model):
     loja = models.ForeignKey("cadastro.Loja", on_delete=models.CASCADE, related_name="agendamentos")
     funcionario = models.ForeignKey("cadastro.Funcionario", on_delete=models.CASCADE, related_name="agendamentos")
     servicos = models.ManyToManyField("cadastro.Servico", related_name="agendamentos")
+
+    duracao_total_minutos = models.PositiveIntegerField(default=0)
 
     data = models.DateField()
     hora = models.TimeField()
@@ -22,3 +27,12 @@ class Agendamento(models.Model):
         if self.servicos.count() > 3:
             nomes += "..."
         return f"{self.cliente.full_name} – {nomes} ({self.data} {self.hora:%H:%M})"
+
+
+@receiver(m2m_changed, sender=Agendamento.servicos.through)
+def atualizar_duracao_total(sender, instance: Agendamento, action, **kwargs):
+    """Atualiza ``duracao_total_minutos`` ao alterar os serviços do agendamento."""
+    if action in {"post_add", "post_remove", "post_clear"}:
+        total = instance.servicos.aggregate(total=Sum("duracao_minutos"))
+        instance.duracao_total_minutos = total["total"] or 0
+        instance.save(update_fields=["duracao_total_minutos"])

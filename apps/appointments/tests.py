@@ -48,6 +48,8 @@ class SlotDisponivelTests(TestCase):
             hora=time(9, 0),
         )
         ag.servicos.add(self.servico)
+        ag.refresh_from_db()
+        self.assertEqual(ag.duracao_total_minutos, 30)
         slots = gerar_slots_disponiveis(self.funcionario, date(2024, 1, 1), 30)
         horas = [s.time() for s in slots]
         self.assertEqual(horas, [time(9, 30)])
