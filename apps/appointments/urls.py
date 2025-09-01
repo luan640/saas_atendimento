@@ -9,4 +9,5 @@ urlpatterns = [
     path("agendar/<int:funcionario_id>/servicos/", views.agendamento_servicos, name="agendamento_servicos"),
     path("agendar/datahora/", views.agendamento_datahora, name="agendamento_datahora"),
     path("agendar/confirmacao/<int:agendamento_id>/", views.agendamento_confirmacao, name="agendamento_confirmacao"),
+    path("agendamentos/<int:pk>/finalizar/", views.finalizar_agendamento, name="finalizar_agendamento"),
 ]

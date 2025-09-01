@@ -1,0 +1,71 @@
+<div class="modal-header">
+  <h5 class="modal-title">Finalizar atendimento</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+</div>
+<div class="modal-body">
+  <form method="post"
+        hx-post="{% url 'appointments:finalizar_agendamento' agendamento.pk %}"
+        hx-target="#agendamentos-section"
+        hx-select="#agendamentos-section"
+        hx-swap="outerHTML"
+        hx-include="#filtro-agendamentos"
+        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShell')).hide(); } catch(e) {} }">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label">Serviços</label>
+      {% for s in form.fields.servicos.queryset %}
+        <div class="form-check">
+          <input class="form-check-input servico-checkbox" type="checkbox" name="servicos" value="{{ s.pk }}" id="servico{{ s.pk }}" data-preco="{{ s.preco }}"{% if s.pk|stringformat:'s' in form.servicos.value %} checked{% endif %}>
+          <label class="form-check-label" for="servico{{ s.pk }}">{{ s.nome }} (R$ {{ s.preco }})</label>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="mb-3">
+      {{ form.funcionario.label_tag }}
+      {{ form.funcionario }}
+    </div>
+
+    <div class="mb-3">
+      {{ form.valor_final.label_tag }}
+      {{ form.valor_final }}
+    </div>
+
+    <div class="mb-3 form-check">
+      {{ form.teve_desconto }} {{ form.teve_desconto.label_tag }}
+    </div>
+
+    <div class="mb-3">
+      {{ form.forma_pagamento.label_tag }}
+      {{ form.forma_pagamento }}
+    </div>
+
+    <div class="mb-3">
+      {{ form.observacao.label_tag }}
+      {{ form.observacao }}
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+      <button type="submit" class="btn btn-primary">Finalizar</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function atualizarTotal() {
+    let total = 0;
+    document.querySelectorAll('.servico-checkbox:checked').forEach(el => {
+      total += parseFloat(el.dataset.preco);
+    });
+    const campo = document.getElementById('id_valor_final');
+    if (campo) {
+      campo.value = total.toFixed(2);
+    }
+  }
+  document.querySelectorAll('.servico-checkbox').forEach(el => {
+    el.addEventListener('change', atualizarTotal);
+  });
+  atualizarTotal();
+</script>

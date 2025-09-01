@@ -33,6 +33,7 @@
                   <th>Cliente</th>
                   <th>Serviços</th>
                   <th>Status</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -51,9 +52,19 @@
                     {% endif %}
                   </td>
                   <td>{% if a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-success"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalShell"
+                            hx-get="{% url 'appointments:finalizar_agendamento' a.pk %}"
+                            hx-target="#modalShell .modal-content"
+                            hx-swap="innerHTML">
+                      Finalizar
+                    </button>
+                  </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="text-muted">Sem pendentes.</td></tr>
+                <tr><td colspan="6" class="text-muted">Sem pendentes.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
@@ -78,6 +89,7 @@
                   <th>Cliente</th>
                   <th>Serviços</th>
                   <th>Status</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -96,9 +108,10 @@
                     {% endif %}
                   </td>
                   <td>{% if a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
+                  <td><span class="text-muted">—</span></td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="text-muted">Sem realizados.</td></tr>
+                <tr><td colspan="6" class="text-muted">Sem realizados.</td></tr>
                 {% endfor %}
               </tbody>
             </table>
