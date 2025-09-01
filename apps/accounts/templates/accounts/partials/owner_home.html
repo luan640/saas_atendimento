@@ -15,6 +15,33 @@
   <div class="alert alert-warning">Sem assinatura vinculada.</div>
 {% endif %}
 
+<div class="row row-cols-1 row-cols-sm-3 g-3 mt-4">
+  <div class="col">
+    <div class="card text-bg-light h-100">
+      <div class="card-body">
+        <h5 class="card-title">Faturado Hoje</h5>
+        <p class="card-text fs-4">R$ {{ faturado_hoje|floatformat:2 }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card text-bg-light h-100">
+      <div class="card-body">
+        <h5 class="card-title">Agendamentos Hoje</h5>
+        <p class="card-text fs-4">{{ agendamentos_hoje }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="card text-bg-light h-100">
+      <div class="card-body">
+        <h5 class="card-title">No-show Hoje</h5>
+        <p class="card-text fs-4">{{ no_show_hoje }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="d-flex gap-2 mt-3">
   <a class="btn btn-secondary" href="{% url 'accounts:owner_logout' %}">Sair</a>
 </div>

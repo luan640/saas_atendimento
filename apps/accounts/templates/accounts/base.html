@@ -8,56 +8,71 @@
   <script src="https://unpkg.com/htmx.org@1.9.8"></script>
 </head>
 <body class="bg-light" hx-boost="true">
+<button class="btn btn-dark m-2 d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#sidebar">Menu</button>
 <div class="d-flex">
-  <nav class="bg-dark text-white p-3" style="min-height:100vh; width:220px;">
-    <h4 class="text-white">Barber SaaS</h4>
-    <ul class="nav nav-pills flex-column">
-      <li class="nav-item">
-        <a
-          class="nav-link text-white"
-          href="{% url 'accounts:owner_home' %}"
-          hx-get="{% url 'accounts:owner_home' %}"
-          hx-target="#content"
-          hx-select="#content"
-          hx-swap="outerHTML"
-          hx-push-url="true"
-        >Home</a>
-      </li>
-      <li class="nav-item">
-        <a
-          class="nav-link text-white"
-          href="{% url 'cadastro:owner_shops' %}"
-          hx-get="{% url 'cadastro:owner_shops' %}"
-          hx-target="#content"
-          hx-select="#content"
-          hx-swap="outerHTML"
-          hx-push-url="true"
-        >Lojas</a>
-      </li>
-      <li class="nav-item">
-        <a
-          class="nav-link text-white"
-          href="{% url 'cadastro:funcionarios' %}"
-          hx-get="{% url 'cadastro:funcionarios' %}"
-          hx-target="#content"
-          hx-select="#content"
-          hx-swap="outerHTML"
-          hx-push-url="true"
-        >Funcionários</a>
-      </li>
-      <li class="nav-item">
-        <a
-          class="nav-link text-white"
-          href="{% url 'cadastro:servicos' %}"
-          hx-get="{% url 'cadastro:servicos' %}"
-          hx-target="#content"
-          hx-select="#content"
-          hx-swap="outerHTML"
-          hx-push-url="true"
-        >Serviços</a>
-      </li>
-    </ul>
-  </nav>
+  <div class="offcanvas-lg offcanvas-start bg-dark text-white p-3 flex-shrink-0" tabindex="-1" id="sidebar" style="width:220px;">
+    <div class="offcanvas-header">
+      <h4 class="offcanvas-title text-white">Barber SaaS</h4>
+      <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+      <ul class="nav nav-pills flex-column mb-auto">
+        <li class="nav-item">
+          <a
+            class="nav-link text-white"
+            href="{% url 'accounts:owner_home' %}"
+            hx-get="{% url 'accounts:owner_home' %}"
+            hx-target="#content"
+            hx-select="#content"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+          >Home</a>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link text-white w-100 text-start" data-bs-toggle="collapse" data-bs-target="#cadastros-menu" aria-expanded="false">
+            Cadastros
+          </button>
+          <div class="collapse" id="cadastros-menu">
+            <ul class="nav flex-column ms-3">
+              <li class="nav-item">
+                <a
+                  class="nav-link text-white"
+                  href="{% url 'cadastro:owner_shops' %}"
+                  hx-get="{% url 'cadastro:owner_shops' %}"
+                  hx-target="#content"
+                  hx-select="#content"
+                  hx-swap="outerHTML"
+                  hx-push-url="true"
+                >Lojas</a>
+              </li>
+              <li class="nav-item">
+                <a
+                  class="nav-link text-white"
+                  href="{% url 'cadastro:funcionarios' %}"
+                  hx-get="{% url 'cadastro:funcionarios' %}"
+                  hx-target="#content"
+                  hx-select="#content"
+                  hx-swap="outerHTML"
+                  hx-push-url="true"
+                >Funcionários</a>
+              </li>
+              <li class="nav-item">
+                <a
+                  class="nav-link text-white"
+                  href="{% url 'cadastro:servicos' %}"
+                  hx-get="{% url 'cadastro:servicos' %}"
+                  hx-target="#content"
+                  hx-select="#content"
+                  hx-swap="outerHTML"
+                  hx-push-url="true"
+                >Serviços</a>
+              </li>
+            </ul>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
   <main class="flex-grow-1 p-4" id="content" hx-history-elt>
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }}">{{ message }}</div>

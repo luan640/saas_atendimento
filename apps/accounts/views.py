@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.http import HttpResponse
-from django.db.models import Q
+from django.db.models import Q, Sum
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
@@ -62,7 +62,17 @@ def owner_login(request):
 @subscription_required
 def owner_home(request):
     sub = getattr(request.user, 'subscription', None)
-    ctx = {'subscription': sub}
+    today = timezone.now().date()
+    base = Agendamento.objects.filter(loja__owner=request.user, data=today)
+    faturado = base.filter(confirmado=True, valor_final__isnull=False).aggregate(total=Sum('valor_final'))['total'] or 0
+    agendamentos = base.count()
+    no_show = base.filter(no_show=True).count()
+    ctx = {
+        'subscription': sub,
+        'faturado_hoje': faturado,
+        'agendamentos_hoje': agendamentos,
+        'no_show_hoje': no_show,
+    }
     target = request.headers.get('HX-Target')
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'accounts/partials/owner_home.html', ctx)
