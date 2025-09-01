@@ -91,7 +91,6 @@
                   <th>Cliente</th>
                   <th>Serviços</th>
                   <th>Status</th>
-                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -111,7 +110,6 @@
                     {% endif %}
                   </td>
                   <td>{% if a.no_show %}Não compareceu{% elif a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
-                  <td><span class="text-muted">—</span></td>
                 </tr>
                 {% empty %}
                 <tr><td colspan="6" class="text-muted">Sem realizados.</td></tr>
