@@ -47,7 +47,10 @@ class FinalizarAtendimentoForm(forms.ModelForm):
             self.fields["funcionario"].queryset = loja.funcionarios.all()
             self.fields["servicos"].queryset = loja.servicos.all()
         if self.instance.pk:
-            self.fields["servicos"].initial = [
-                str(pk)
-                for pk in self.instance.servicos.values_list("pk", flat=True)
+            # Pre-seleciona os serviços já escolhidos no agendamento.
+            # Usamos o dicionário ``initial`` do formulário para garantir
+            # que ``BoundField.value`` retorne esses valores, permitindo que
+            # o template marque automaticamente as caixas correspondentes.
+            self.initial["servicos"] = [
+                str(pk) for pk in self.instance.servicos.values_list("pk", flat=True)
             ]
