@@ -46,3 +46,8 @@ class FinalizarAtendimentoForm(forms.ModelForm):
         if loja is not None:
             self.fields["funcionario"].queryset = loja.funcionarios.all()
             self.fields["servicos"].queryset = loja.servicos.all()
+        if self.instance.pk:
+            self.fields["servicos"].initial = [
+                str(pk)
+                for pk in self.instance.servicos.values_list("pk", flat=True)
+            ]
