@@ -42,8 +42,12 @@
 </div>
 
 <script>
+  // Remove o { once: true } e adiciona debug
   document.getElementById('modalShell').addEventListener('hidden.bs.modal', function () {
+    console.log('modalShell fechado, tentando reabrir modalShellLarge');
     var lg = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge'));
-    if (lg) { lg.show(); }
-  }, { once: true });
+    if (lg) { 
+      lg.show(); 
+    }
+  });
 </script>

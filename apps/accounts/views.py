@@ -120,7 +120,6 @@ def owner_home_agendamentos(request):
     }
     return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
 
-
 @login_required
 @subscription_required
 def owner_criar_atendimento(request):
@@ -212,7 +211,6 @@ def owner_add_cliente(request):
     for field in form.fields.values():
         field.widget.attrs.update({'class': 'form-control'})
     return render(request, 'accounts/partials/cliente_form_modal.html', {'cliente_form': form})
-
 
 @login_required
 @subscription_required
