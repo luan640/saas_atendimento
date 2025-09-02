@@ -93,32 +93,6 @@ class Funcionario(models.Model):
         unique_together = (('loja', 'slug'),)
         ordering = ('nome',)
 
-
-# --- Clientes ---
-
-class Cliente(models.Model):
-    owner = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='clientes',
-        limit_choices_to={'is_owner': True}
-    )
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='cliente_de',
-        limit_choices_to={'is_client': True}
-    )
-    criado_em = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = (('owner', 'user'),)
-        ordering = ('user__full_name',)
-
-    def __str__(self):
-        nome = self.user.full_name or self.user.email
-        return f'{nome} – {self.owner.email}'
-
 class LojaAgendamentoConfig(models.Model):
     loja = models.OneToOneField('Loja', on_delete=models.CASCADE, related_name='agendamento_config')
     slot_interval_minutes = models.PositiveSmallIntegerField(
@@ -216,6 +190,31 @@ class FuncionarioAgendaExcecao(models.Model):
     def __str__(self):
         flag = 'Folga' if self.is_day_off else 'Especial'
         return f'{self.funcionario.nome} – {self.data} ({flag})'
+
+# --- Clientes ---
+
+class Cliente(models.Model):
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='clientes',
+        limit_choices_to={'is_owner': True}
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='cliente_de',
+        limit_choices_to={'is_client': True}
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (('owner', 'user'),)
+        ordering = ('user__full_name',)
+
+    def __str__(self):
+        nome = self.user.full_name or self.user.email
+        return f'{nome} – {self.owner.email}'
 
 # ------ Serviços -----
 

@@ -487,7 +487,6 @@ def servico_delete(request, pk):
 
 # ======== CLIENTES ========
 
-
 @login_required
 @subscription_required
 def clientes(request):

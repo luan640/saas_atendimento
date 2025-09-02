@@ -129,6 +129,20 @@
                     <span class="hide-menu">Serviços</span>
                   </a>
                 </li>
+                <li class="sidebar-item">
+                  <a
+                    aria-expanded="false"
+                    class="sidebar-link"
+                    href="{% url 'cadastro:clientes' %}"
+                    hx-get="{% url 'cadastro:clientes' %}"
+                    hx-target="#content"
+                    hx-select="#content"
+                    hx-swap="outerHTML"
+                    hx-push-url="true">
+                    <i class="ti ti-atom"></i>
+                    <span class="hide-menu">Clientes</span>
+                  </a>
+                </li>
               </ul>
             </li>
           </ul>

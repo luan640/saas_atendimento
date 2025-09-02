@@ -173,7 +173,6 @@ class ServicoForm(forms.ModelForm):
         else:
             self.fields["profissionais"].queryset = Funcionario.objects.none()
 
-
 class FuncionarioAgendaSemanalForm(forms.ModelForm):
     inicio = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
     fim = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))

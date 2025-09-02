@@ -11,7 +11,7 @@ from django.db.models import Q, Sum
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
-from apps.cadastro.models import Loja
+from apps.cadastro.models import Loja, Cliente
 from apps.accounts.decorators import subscription_required
 from apps.appointments.models import Agendamento
 
@@ -201,6 +201,10 @@ def client_verify(request):
                         'username': f'{full_name}_{phone}',
                     }
                 )
+
+                owner = get_object_or_404(Loja, slug=shop_slug)
+
+                Cliente.objects.create(owner=owner.owner, user=user)
 
                 if not user.is_client:
                     user.is_client = True
