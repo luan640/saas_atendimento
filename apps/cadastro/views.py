@@ -3,12 +3,13 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
-from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal
+from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal, Cliente
 from .forms import (
     LojaForm,
     FuncionarioForm,
     ServicoForm,
     FuncionarioAgendaSemanalFormSet,
+    ClienteForm,
 )
 from apps.accounts.decorators import subscription_required
 
@@ -482,3 +483,85 @@ def servico_delete(request, pk):
 
     # GET -> confirma exclusão
     return render(request, 'cadastro/partials/servico_confirm_delete.html', {'servico': serv})
+
+
+# ======== CLIENTES ========
+
+@login_required
+@subscription_required
+def clientes(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    target = request.headers.get('HX-Target')
+
+    if request.method == 'POST':
+        form = ClienteForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            Cliente.objects.create(owner=request.user, user=user)
+            messages.success(request, 'Cliente cadastrado com sucesso!')
+            qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
+            if request.headers.get('HX-Request') and target != 'content':
+                form = ClienteForm()
+                return render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+            return redirect('cadastro:clientes')
+
+        qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
+        ctx = {'form': form, 'clientes': qs}
+        if request.headers.get('HX-Request') and target != 'content':
+            resp = render(request, 'cadastro/clientes.html', ctx)
+            resp['HX-Retarget'] = '#modal-cliente-body'
+            resp['HX-Reselect'] = '#modal-cliente-body'
+            resp['HX-Reswap'] = 'outerHTML'
+            return resp
+        return render(request, 'cadastro/clientes.html', ctx)
+
+    form = ClienteForm()
+    qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
+    if request.headers.get('HX-Request') and target != 'content':
+        return render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+    return render(request, 'cadastro/clientes.html', {'form': form, 'clientes': qs})
+
+
+@login_required
+@subscription_required
+def cliente_edit(request, pk):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    cliente = get_object_or_404(Cliente, pk=pk, owner=request.user)
+    user = cliente.user
+
+    if request.method == 'POST':
+        form = ClienteForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Cliente atualizado!')
+            qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
+            return render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+        resp = render(request, 'cadastro/partials/cliente_form_edit.html',
+                      {'form': form, 'cliente': cliente, 'acao': 'Editar cliente'})
+        resp['HX-Retarget'] = '#modalClienteOps .modal-content'
+        return resp
+
+    form = ClienteForm(instance=user)
+    return render(request, 'cadastro/partials/cliente_form_edit.html',
+                  {'form': form, 'cliente': cliente, 'acao': 'Editar cliente'})
+
+
+@login_required
+@subscription_required
+def cliente_delete(request, pk):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    cliente = get_object_or_404(Cliente, pk=pk, owner=request.user)
+
+    if request.method == 'POST':
+        cliente.user.delete()
+        messages.success(request, 'Cliente excluído!')
+        qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
+        return render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+
+    return render(request, 'cadastro/partials/cliente_confirm_delete.html', {'cliente': cliente})
