@@ -11,9 +11,10 @@ from django.db.models import Q, Sum
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
-from apps.cadastro.models import Loja, Cliente
+from apps.cadastro.models import Loja, Cliente, Funcionario, Servico
 from apps.accounts.decorators import subscription_required
 from apps.appointments.models import Agendamento
+from apps.appointments.utils import gerar_slots_disponiveis
 
 # ========== OWNER ==========
 
@@ -117,6 +118,37 @@ def owner_home_agendamentos(request):
         'total_realizados': base.filter(confirmado=True).count(),
     }
     return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
+
+
+@login_required
+@subscription_required
+def owner_criar_atendimento(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    clientes = (
+        request.user.clientes.select_related('user').order_by('user__full_name')
+    )
+    funcionarios = (
+        Funcionario.objects.filter(loja__owner=request.user, ativo=True)
+        .order_by('nome')
+    )
+    servicos = (
+        Servico.objects.filter(loja__owner=request.user, ativo=True)
+        .order_by('nome')
+    )
+    slots = []
+    if funcionarios.exists():
+        dia = timezone.now().date()
+        slots = gerar_slots_disponiveis(funcionarios.first(), dia)
+
+    ctx = {
+        'clientes': clientes,
+        'funcionarios': funcionarios,
+        'servicos': servicos,
+        'slots': slots,
+    }
+    return render(request, 'accounts/partials/criar_atendimento_modal.html', ctx)
 
 @login_required
 @subscription_required

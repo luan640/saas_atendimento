@@ -1,0 +1,47 @@
+<div class="modal-header">
+  <h5 class="modal-title">Criar atendimento</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+  <form id="formCriarAtendimento">
+    <div class="mb-3">
+      <label for="cliente" class="form-label">Cliente</label>
+      <div class="input-group">
+        <select class="form-select" id="cliente" name="cliente">
+          {% for c in clientes %}
+            <option value="{{ c.user.id }}">{{ c.user.full_name }}</option>
+          {% endfor %}
+        </select>
+        <a href="{% url 'cadastro:clientes' %}" target="_blank" class="btn btn-outline-secondary">Adicionar</a>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label for="funcionario" class="form-label">Funcionário</label>
+      <select class="form-select" id="funcionario" name="funcionario">
+        {% for f in funcionarios %}
+          <option value="{{ f.id }}">{{ f.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="servico" class="form-label">Serviço</label>
+      <select class="form-select" id="servico" name="servico">
+        {% for s in servicos %}
+          <option value="{{ s.id }}">{{ s.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="slot" class="form-label">Horário</label>
+      <select class="form-select" id="slot" name="slot">
+        {% for s in slots %}
+          <option value="{{ s|date:'H:i' }}">{{ s|date:'H:i' }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+  <button type="button" class="btn btn-primary">Salvar</button>
+</div>

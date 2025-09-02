@@ -10,6 +10,7 @@ urlpatterns = [
     path('logout/', views.owner_logout, name='owner_logout'),
     path('home/', views.owner_home, name='owner_home'),
     path("home/agendamentos/", views.owner_home_agendamentos, name="owner_home_agendamentos"),
+    path("home/criar-atendimento/", views.owner_criar_atendimento, name="owner_criar_atendimento"),
     path("sobre/", views.owner_sobre, name="owner_sobre"),
 
     # Cliente (OTP)
