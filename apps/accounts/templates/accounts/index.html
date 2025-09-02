@@ -251,6 +251,15 @@
     document.body.addEventListener("htmx:syntax:error", function(evt) {
       console.error("HTMX target error:", evt.detail);
     });
+    document.body.addEventListener('htmx:responseError', (e) => {
+      console.error('HTMX responseError', e.detail.xhr.status, e.detail.xhr.responseText);
+    });
+    document.body.addEventListener('htmx:sendError', (e) => {
+      console.error('HTMX sendError', e.detail);
+    });
+    document.body.addEventListener('htmx:afterOnLoad', (e) => {
+      console.log('HTMX afterOnLoad', e.detail.xhr.status, e.detail.xhr.responseText?.slice(0,200));
+    });
   </script>
 </body>
 

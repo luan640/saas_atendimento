@@ -19,15 +19,6 @@
             <option value="{{ c.user.id }}">{{ c.user.full_name }}</option>
           {% endfor %}
         </select>
-        <button class="btn btn-outline-secondary"
-          data-bs-toggle="modal"
-          data-bs-target="#modalShell"
-          hx-get="{% url 'accounts:owner_add_cliente' %}"
-          hx-target="#modalShell .modal-content"
-          hx-swap="innerHTML">
-        Adicionar cliente
-      </button>
-
       </div>
     </div>
 
