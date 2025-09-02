@@ -21,11 +21,10 @@
         </select>
         <button class="btn btn-outline-secondary"
                 type="button"
-                data-bs-toggle="modal"
-                data-bs-target="#modalShell"
                 hx-get="{% url 'accounts:owner_add_cliente' %}"
                 hx-target="#modalShell .modal-content"
-                hx-swap="innerHTML">
+                hx-swap="innerHTML"
+                hx-on="htmx:afterSwap: bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShell')).show(); var m=bootstrap.Modal.getInstance(document.getElementById('modalShellLarge')); if(m) m.hide();">
           Adicionar cliente
         </button>
       </div>
