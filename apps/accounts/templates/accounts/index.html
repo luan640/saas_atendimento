@@ -251,6 +251,16 @@
     document.body.addEventListener("htmx:syntax:error", function(evt) {
       console.error("HTMX target error:", evt.detail);
     });
+
+    document.body.addEventListener('cliente-adicionado', function () {
+      const sm = bootstrap.Modal.getInstance(document.getElementById('modalShell'));
+      if (sm) sm.hide();
+    });
+
+    document.getElementById('modalShell').addEventListener('hidden.bs.modal', function () {
+      const lg = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge'));
+      if (lg) lg.show();
+    });
   </script>
 </body>
 

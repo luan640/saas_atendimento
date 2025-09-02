@@ -202,6 +202,7 @@ def owner_add_cliente(request):
             resp['HX-Retarget'] = '#cliente'
             resp['HX-Reswap'] = 'beforeend'
             resp['HX-Reselect'] = f'#cliente option[value="{user.id}"]'
+            resp['HX-Trigger'] = 'cliente-adicionado'
             return resp
         resp = render(request, 'accounts/partials/cliente_form_modal.html', {'cliente_form': form}, status=422)
         resp['HX-Retarget'] = '#modalShell .modal-content'
