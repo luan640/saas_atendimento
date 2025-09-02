@@ -1,5 +1,5 @@
 import random
-from datetime import timedelta
+from datetime import date, timedelta
 from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -11,6 +11,7 @@ from django.db.models import Q, Sum
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
+from apps.cadastro.forms import ClienteForm
 from apps.cadastro.models import Loja, Cliente, Funcionario, Servico
 from apps.accounts.decorators import subscription_required
 from apps.appointments.models import Agendamento
@@ -137,18 +138,45 @@ def owner_criar_atendimento(request):
         Servico.objects.filter(loja__owner=request.user, ativo=True)
         .order_by('nome')
     )
+    dia = timezone.now().date()
     slots = []
     if funcionarios.exists():
-        dia = timezone.now().date()
         slots = gerar_slots_disponiveis(funcionarios.first(), dia)
+
+    cliente_form = ClienteForm()
+    for field in cliente_form.fields.values():
+        field.widget.attrs.update({'class': 'form-control'})
 
     ctx = {
         'clientes': clientes,
         'funcionarios': funcionarios,
         'servicos': servicos,
         'slots': slots,
+        'cliente_form': cliente_form,
+        'dia': dia,
     }
     return render(request, 'accounts/partials/criar_atendimento_modal.html', ctx)
+
+
+@login_required
+@subscription_required
+def owner_slots_disponiveis(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    func_id = request.GET.get('funcionario')
+    data_str = request.GET.get('data')
+    if not func_id or not data_str:
+        return HttpResponse('Dados insuficientes', status=400)
+
+    dia = date.fromisoformat(data_str)
+    funcionario = get_object_or_404(
+        Funcionario, pk=func_id, loja__owner=request.user, ativo=True
+    )
+    slots = gerar_slots_disponiveis(funcionario, dia)
+    return render(
+        request, 'accounts/partials/slot_options.html', {'slots': slots}
+    )
 
 @login_required
 @subscription_required

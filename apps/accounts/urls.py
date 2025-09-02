@@ -11,6 +11,7 @@ urlpatterns = [
     path('home/', views.owner_home, name='owner_home'),
     path("home/agendamentos/", views.owner_home_agendamentos, name="owner_home_agendamentos"),
     path("home/criar-atendimento/", views.owner_criar_atendimento, name="owner_criar_atendimento"),
+    path("home/criar-atendimento/slots/", views.owner_slots_disponiveis, name="owner_slots_disponiveis"),
     path("sobre/", views.owner_sobre, name="owner_sobre"),
 
     # Cliente (OTP)
