@@ -6,8 +6,7 @@
   <form id="formAddCliente"
         hx-post="{% url 'accounts:owner_add_cliente' %}"
         hx-target="#modalShell .modal-content"
-        hx-swap="innerHTML"
-        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { var sm=bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShell')); sm.hide(); bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge')).show(); } catch(e) {} }">
+        hx-swap="innerHTML">
     {% csrf_token %}
     <div class="row g-2">
       <div class="col-md-4">
@@ -40,10 +39,3 @@
     </div>
   </form>
 </div>
-
-<script>
-  document.getElementById('modalShell').addEventListener('hidden.bs.modal', function () {
-    var lg = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge'));
-    if (lg) { lg.show(); }
-  }, { once: true });
-</script>
