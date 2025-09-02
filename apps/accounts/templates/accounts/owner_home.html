@@ -3,6 +3,17 @@
 
 {% block content %}
 
+<div class="mb-3 text-end">
+  <button class="btn btn-primary"
+          data-bs-toggle="modal"
+          data-bs-target="#modalShellLarge"
+          hx-get="{% url 'accounts:owner_criar_atendimento' %}"
+          hx-target="#modalShellLarge .modal-content"
+          hx-swap="innerHTML">
+    Criar atendimento
+  </button>
+</div>
+
 <div id="owner-home">
   {# Conteúdo dinâmico: renderizamos o parcial aqui #}
   {% include 'accounts/partials/owner_home.html' %}

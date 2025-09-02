@@ -1,0 +1,78 @@
+<div class="modal-header">
+  <h5 class="modal-title">Criar atendimento</h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<div class="modal-body">
+  <form id="formCriarAtendimento"
+        hx-post="{% url 'accounts:owner_criar_atendimento' %}"
+        hx-target="#agendamentos-section"
+        hx-select="#agendamentos-section"
+        hx-swap="outerHTML"
+        hx-indicator="#dash-loading"
+        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge')).hide(); } catch(e) {} }">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="cliente" class="form-label">Cliente</label>
+      <div class="input-group">
+        <select class="form-select" id="cliente" name="cliente">
+          {% for c in clientes %}
+            <option value="{{ c.user.id }}">{{ c.user.full_name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-outline-secondary"
+                type="button"
+                hx-get="{% url 'accounts:owner_add_cliente' %}"
+                hx-target="#modalShell .modal-content"
+                hx-swap="innerHTML"
+                hx-on="htmx:afterSwap: bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShell')).show(); var m=bootstrap.Modal.getInstance(document.getElementById('modalShellLarge')); if(m) m.hide();">
+          Adicionar cliente
+        </button>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="funcionario" class="form-label">Funcionário</label>
+      <select class="form-select" id="funcionario" name="funcionario"
+              hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
+              hx-trigger="change"
+              hx-target="#slot"
+              hx-include="#data"
+              hx-swap="innerHTML">
+        {% for f in funcionarios %}
+          <option value="{{ f.id }}">{{ f.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="servicos" class="form-label">Serviços</label>
+      <select class="form-select" id="servicos" name="servicos" multiple>
+        {% for s in servicos %}
+          <option value="{{ s.id }}">{{ s.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label for="data" class="form-label">Data</label>
+      <input type="date" class="form-control" id="data" name="data"
+             value="{{ dia|date:'Y-m-d' }}"
+             hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
+             hx-trigger="change"
+             hx-target="#slot"
+             hx-include="#funcionario"
+             hx-swap="innerHTML">
+    </div>
+
+    <div class="mb-3">
+      <label for="slot" class="form-label">Horário</label>
+      <select class="form-select" id="slot" name="slot">
+        {% include 'accounts/partials/slot_options.html' %}
+      </select>
+    </div>
+  </form>
+</div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+    <button type="submit" class="btn btn-primary" form="formCriarAtendimento">Salvar</button>
+  </div>

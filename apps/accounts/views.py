@@ -1,5 +1,5 @@
 import random
-from datetime import timedelta
+from datetime import date, timedelta, time
 from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -11,9 +11,11 @@ from django.db.models import Q, Sum
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
-from apps.cadastro.models import Loja, Cliente
+from apps.cadastro.forms import ClienteForm
+from apps.cadastro.models import Loja, Cliente, Funcionario, Servico
 from apps.accounts.decorators import subscription_required
 from apps.appointments.models import Agendamento
+from apps.appointments.utils import gerar_slots_disponiveis
 
 # ========== OWNER ==========
 
@@ -117,6 +119,120 @@ def owner_home_agendamentos(request):
         'total_realizados': base.filter(confirmado=True).count(),
     }
     return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
+
+
+@login_required
+@subscription_required
+def owner_criar_atendimento(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente')
+        funcionario_id = request.POST.get('funcionario')
+        servicos_ids = request.POST.getlist('servicos')
+        data_str = request.POST.get('data')
+        hora_str = request.POST.get('slot')
+
+        if not (cliente_id and funcionario_id and servicos_ids and data_str and hora_str):
+            funcionarios = Funcionario.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
+            servicos = Servico.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
+            dia = date.fromisoformat(data_str) if data_str else timezone.now().date()
+            slots = []
+            if funcionario_id and data_str:
+                funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja__owner=request.user, ativo=True)
+                slots = gerar_slots_disponiveis(funcionario, dia)
+            clientes = request.user.clientes.select_related('user').order_by('user__full_name')
+            ctx = {
+                'clientes': clientes,
+                'funcionarios': funcionarios,
+                'servicos': servicos,
+                'slots': slots,
+                'dia': dia,
+            }
+            resp = render(request, 'accounts/partials/criar_atendimento_modal.html', ctx, status=422)
+            resp['HX-Retarget'] = '#modalShellLarge .modal-content'
+            resp['HX-Reselect'] = '#modalShellLarge .modal-content'
+            resp['HX-Reswap'] = 'innerHTML'
+            return resp
+
+        cliente = get_object_or_404(User, pk=cliente_id, is_client=True)
+        funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja__owner=request.user, ativo=True)
+        servicos_qs = Servico.objects.filter(pk__in=servicos_ids, loja=funcionario.loja, ativo=True)
+        dia = date.fromisoformat(data_str)
+        hora = time.fromisoformat(hora_str)
+        ag = Agendamento.objects.create(
+            cliente=cliente,
+            loja=funcionario.loja,
+            funcionario=funcionario,
+            data=dia,
+            hora=hora,
+        )
+        ag.servicos.set(servicos_qs)
+        return owner_home_agendamentos(request)
+
+    clientes = request.user.clientes.select_related('user').order_by('user__full_name')
+    funcionarios = Funcionario.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
+    servicos = Servico.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
+    dia = timezone.now().date()
+    slots = []
+    if funcionarios.exists():
+        slots = gerar_slots_disponiveis(funcionarios.first(), dia)
+    ctx = {
+        'clientes': clientes,
+        'funcionarios': funcionarios,
+        'servicos': servicos,
+        'slots': slots,
+        'dia': dia,
+    }
+    return render(request, 'accounts/partials/criar_atendimento_modal.html', ctx)
+
+@login_required
+@subscription_required
+def owner_add_cliente(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+    if request.method == 'POST':
+        form = ClienteForm(request.POST)
+        for field in form.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})
+        if form.is_valid():
+            user = form.save()
+            Cliente.objects.get_or_create(owner=request.user, user=user)
+            resp = HttpResponse(f'<option value="{user.id}" selected>{user.full_name}</option>')
+            resp['HX-Retarget'] = '#cliente'
+            resp['HX-Reswap'] = 'beforeend'
+            resp['HX-Reselect'] = f'#cliente option[value="{user.id}"]'
+            return resp
+        resp = render(request, 'accounts/partials/cliente_form_modal.html', {'cliente_form': form}, status=422)
+        resp['HX-Retarget'] = '#modalShell .modal-content'
+        resp['HX-Reselect'] = '#modalShell .modal-content'
+        resp['HX-Reswap'] = 'innerHTML'
+        return resp
+    form = ClienteForm()
+    for field in form.fields.values():
+        field.widget.attrs.update({'class': 'form-control'})
+    return render(request, 'accounts/partials/cliente_form_modal.html', {'cliente_form': form})
+
+
+@login_required
+@subscription_required
+def owner_slots_disponiveis(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    func_id = request.GET.get('funcionario')
+    data_str = request.GET.get('data')
+    if not func_id or not data_str:
+        return HttpResponse('Dados insuficientes', status=400)
+
+    dia = date.fromisoformat(data_str)
+    funcionario = get_object_or_404(
+        Funcionario, pk=func_id, loja__owner=request.user, ativo=True
+    )
+    slots = gerar_slots_disponiveis(funcionario, dia)
+    return render(
+        request, 'accounts/partials/slot_options.html', {'slots': slots}
+    )
 
 @login_required
 @subscription_required
