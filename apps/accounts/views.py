@@ -157,7 +157,6 @@ def owner_criar_atendimento(request):
     }
     return render(request, 'accounts/partials/criar_atendimento_modal.html', ctx)
 
-
 @login_required
 @subscription_required
 def owner_slots_disponiveis(request):
