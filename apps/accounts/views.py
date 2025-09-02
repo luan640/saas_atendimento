@@ -133,19 +133,7 @@ def owner_criar_atendimento(request):
         data_str = request.POST.get('data')
         hora_str = request.POST.get('slot')
 
-        cliente_form = ClienteForm(request.POST)
-        novo_cliente = any(request.POST.get(f) for f in ['full_name', 'email', 'phone'])
-        if novo_cliente:
-            if cliente_form.is_valid():
-                user = cliente_form.save()
-                Cliente.objects.get_or_create(owner=request.user, user=user)
-                cliente_id = user.id
-            else:
-                pass  # manter erros no formulário
-        else:
-            cliente_form = ClienteForm()
-
-        if not (cliente_id and funcionario_id and servicos_ids and data_str and hora_str) or (novo_cliente and cliente_form.errors):
+        if not (cliente_id and funcionario_id and servicos_ids and data_str and hora_str):
             funcionarios = Funcionario.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
             servicos = Servico.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
             dia = date.fromisoformat(data_str) if data_str else timezone.now().date()
@@ -154,14 +142,11 @@ def owner_criar_atendimento(request):
                 funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja__owner=request.user, ativo=True)
                 slots = gerar_slots_disponiveis(funcionario, dia)
             clientes = request.user.clientes.select_related('user').order_by('user__full_name')
-            for field in cliente_form.fields.values():
-                field.widget.attrs.update({'class': 'form-control'})
             ctx = {
                 'clientes': clientes,
                 'funcionarios': funcionarios,
                 'servicos': servicos,
                 'slots': slots,
-                'cliente_form': cliente_form,
                 'dia': dia,
             }
             resp = render(request, 'accounts/partials/criar_atendimento_modal.html', ctx, status=422)
@@ -192,18 +177,42 @@ def owner_criar_atendimento(request):
     slots = []
     if funcionarios.exists():
         slots = gerar_slots_disponiveis(funcionarios.first(), dia)
-    cliente_form = ClienteForm()
-    for field in cliente_form.fields.values():
-        field.widget.attrs.update({'class': 'form-control'})
     ctx = {
         'clientes': clientes,
         'funcionarios': funcionarios,
         'servicos': servicos,
         'slots': slots,
-        'cliente_form': cliente_form,
         'dia': dia,
     }
     return render(request, 'accounts/partials/criar_atendimento_modal.html', ctx)
+
+
+@login_required
+@subscription_required
+def owner_add_cliente(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+    if request.method == 'POST':
+        form = ClienteForm(request.POST)
+        for field in form.fields.values():
+            field.widget.attrs.update({'class': 'form-control'})
+        if form.is_valid():
+            user = form.save()
+            Cliente.objects.get_or_create(owner=request.user, user=user)
+            resp = HttpResponse(f'<option value="{user.id}" selected>{user.full_name}</option>')
+            resp['HX-Retarget'] = '#cliente'
+            resp['HX-Reswap'] = 'beforeend'
+            resp['HX-Reselect'] = f'#cliente option[value="{user.id}"]'
+            return resp
+        resp = render(request, 'accounts/partials/cliente_form_modal.html', {'cliente_form': form}, status=422)
+        resp['HX-Retarget'] = '#modalShell .modal-content'
+        resp['HX-Reselect'] = '#modalShell .modal-content'
+        resp['HX-Reswap'] = 'innerHTML'
+        return resp
+    form = ClienteForm()
+    for field in form.fields.values():
+        field.widget.attrs.update({'class': 'form-control'})
+    return render(request, 'accounts/partials/cliente_form_modal.html', {'cliente_form': form})
 
 
 @login_required

@@ -13,19 +13,21 @@
     {% csrf_token %}
     <div class="mb-3">
       <label for="cliente" class="form-label">Cliente</label>
-      <select class="form-select" id="cliente" name="cliente">
-        {% for c in clientes %}
-          <option value="{{ c.user.id }}">{{ c.user.full_name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <h6>Novo cliente (opcional)</h6>
-      <div class="row g-2">
-        <div class="col-md-4">{{ cliente_form.full_name }}</div>
-        <div class="col-md-4">{{ cliente_form.email }}</div>
-        <div class="col-md-4">{{ cliente_form.phone }}</div>
+      <div class="input-group">
+        <select class="form-select" id="cliente" name="cliente">
+          {% for c in clientes %}
+            <option value="{{ c.user.id }}">{{ c.user.full_name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-outline-secondary"
+                type="button"
+                data-bs-toggle="modal"
+                data-bs-target="#modalShell"
+                hx-get="{% url 'accounts:owner_add_cliente' %}"
+                hx-target="#modalShell .modal-content"
+                hx-swap="innerHTML">
+          Adicionar cliente
+        </button>
       </div>
     </div>
 
