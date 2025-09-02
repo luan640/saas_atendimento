@@ -1,5 +1,5 @@
 import random
-from datetime import date, timedelta
+from datetime import date, timedelta, time
 from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -126,27 +126,75 @@ def owner_home_agendamentos(request):
 def owner_criar_atendimento(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente')
+        funcionario_id = request.POST.get('funcionario')
+        servicos_ids = request.POST.getlist('servicos')
+        data_str = request.POST.get('data')
+        hora_str = request.POST.get('slot')
 
-    clientes = (
-        request.user.clientes.select_related('user').order_by('user__full_name')
-    )
-    funcionarios = (
-        Funcionario.objects.filter(loja__owner=request.user, ativo=True)
-        .order_by('nome')
-    )
-    servicos = (
-        Servico.objects.filter(loja__owner=request.user, ativo=True)
-        .order_by('nome')
-    )
+        cliente_form = ClienteForm(request.POST)
+        novo_cliente = any(request.POST.get(f) for f in ['full_name', 'email', 'phone'])
+        if novo_cliente:
+            if cliente_form.is_valid():
+                user = cliente_form.save()
+                Cliente.objects.get_or_create(owner=request.user, user=user)
+                cliente_id = user.id
+            else:
+                pass  # manter erros no formulário
+        else:
+            cliente_form = ClienteForm()
+
+        if not (cliente_id and funcionario_id and servicos_ids and data_str and hora_str) or (novo_cliente and cliente_form.errors):
+            funcionarios = Funcionario.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
+            servicos = Servico.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
+            dia = date.fromisoformat(data_str) if data_str else timezone.now().date()
+            slots = []
+            if funcionario_id and data_str:
+                funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja__owner=request.user, ativo=True)
+                slots = gerar_slots_disponiveis(funcionario, dia)
+            clientes = request.user.clientes.select_related('user').order_by('user__full_name')
+            for field in cliente_form.fields.values():
+                field.widget.attrs.update({'class': 'form-control'})
+            ctx = {
+                'clientes': clientes,
+                'funcionarios': funcionarios,
+                'servicos': servicos,
+                'slots': slots,
+                'cliente_form': cliente_form,
+                'dia': dia,
+            }
+            resp = render(request, 'accounts/partials/criar_atendimento_modal.html', ctx, status=422)
+            resp['HX-Retarget'] = '#modalShellLarge .modal-content'
+            resp['HX-Reselect'] = '#modalShellLarge .modal-content'
+            resp['HX-Reswap'] = 'innerHTML'
+            return resp
+
+        cliente = get_object_or_404(User, pk=cliente_id, is_client=True)
+        funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja__owner=request.user, ativo=True)
+        servicos_qs = Servico.objects.filter(pk__in=servicos_ids, loja=funcionario.loja, ativo=True)
+        dia = date.fromisoformat(data_str)
+        hora = time.fromisoformat(hora_str)
+        ag = Agendamento.objects.create(
+            cliente=cliente,
+            loja=funcionario.loja,
+            funcionario=funcionario,
+            data=dia,
+            hora=hora,
+        )
+        ag.servicos.set(servicos_qs)
+        return owner_home_agendamentos(request)
+
+    clientes = request.user.clientes.select_related('user').order_by('user__full_name')
+    funcionarios = Funcionario.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
+    servicos = Servico.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
     dia = timezone.now().date()
     slots = []
     if funcionarios.exists():
         slots = gerar_slots_disponiveis(funcionarios.first(), dia)
-
     cliente_form = ClienteForm()
     for field in cliente_form.fields.values():
         field.widget.attrs.update({'class': 'form-control'})
-
     ctx = {
         'clientes': clientes,
         'funcionarios': funcionarios,

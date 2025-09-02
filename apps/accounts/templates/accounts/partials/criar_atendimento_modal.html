@@ -3,7 +3,14 @@
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-  <form id="formCriarAtendimento">
+  <form id="formCriarAtendimento"
+        hx-post="{% url 'accounts:owner_criar_atendimento' %}"
+        hx-target="#agendamentos-section"
+        hx-select="#agendamentos-section"
+        hx-swap="outerHTML"
+        hx-indicator="#dash-loading"
+        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge')).hide(); } catch(e) {} }">
+    {% csrf_token %}
     <div class="mb-3">
       <label for="cliente" class="form-label">Cliente</label>
       <select class="form-select" id="cliente" name="cliente">
@@ -64,7 +71,7 @@
     </div>
   </form>
 </div>
-<div class="modal-footer">
-  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-  <button type="button" class="btn btn-primary">Salvar</button>
-</div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+    <button type="submit" class="btn btn-primary" form="formCriarAtendimento">Salvar</button>
+  </div>
