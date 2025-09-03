@@ -4,12 +4,12 @@
 </div>
 <div class="modal-body">
   <form id="formCriarAtendimento"
-        hx-post="{% url 'accounts:owner_criar_atendimento' %}"
-        hx-target="#agendamentos-section"
-        hx-select="#agendamentos-section"
-        hx-swap="outerHTML"
-        hx-indicator="#dash-loading"
-        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge')).hide(); } catch(e) {} }">
+    hx-post="{% url 'accounts:owner_criar_atendimento' %}"
+    hx-target="#agendamentos-section"
+    hx-select="#agendamentos-section"
+    hx-swap="outerHTML"
+    hx-indicator="#dash-loading"
+    hx-on="htmx:afterRequest: if (event.target.id === 'formCriarAtendimento' && event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge')).hide(); } catch(e) {} }">
     {% csrf_token %}
     <div class="mb-3">
       <label for="cliente" class="form-label">Cliente</label>
