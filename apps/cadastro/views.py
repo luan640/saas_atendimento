@@ -31,6 +31,15 @@ def _get_loja_ativa(request, lojas_qs):
 def _agenda_formset(instance, data=None):
     """Cria formset da agenda semanal preenchendo os dias faltantes."""
     formset = FuncionarioAgendaSemanalFormSet(data=data, instance=instance, prefix="agenda")
+
+    # Ignora formulários sem horários de início/fim na validação/salvamento
+    if data:
+        for form in formset.forms:
+            inicio = form.data.get(f"{form.prefix}-inicio")
+            fim = form.data.get(f"{form.prefix}-fim")
+            if not inicio and not fim:
+                form.empty_permitted = True
+
     usados = {f.instance.weekday for f in formset.initial_forms if f.instance.pk}
     restantes = [d for d in range(7) if d not in usados]
     for form, dia in zip(formset.extra_forms, restantes):
