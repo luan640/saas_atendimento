@@ -13,6 +13,7 @@ urlpatterns = [
     path("home/criar-atendimento/", views.owner_criar_atendimento, name="owner_criar_atendimento"),
     path("home/criar-atendimento/add-cliente/", views.owner_add_cliente, name="owner_add_cliente"),
     path("home/criar-atendimento/slots/", views.owner_slots_disponiveis, name="owner_slots_disponiveis"),
+    path("home/criar-atendimento/loja/", views.owner_criar_atendimento_loja, name="owner_criar_atendimento_loja"),
     path("sobre/", views.owner_sobre, name="owner_sobre"),
 
     # Cliente (OTP)
