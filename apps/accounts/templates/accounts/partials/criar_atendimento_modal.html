@@ -27,9 +27,10 @@
       <select class="form-select" id="funcionario" name="funcionario"
               hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
               hx-trigger="change"
-              hx-target="#slot"
+              hx-target="#slot-modal"
               hx-include="#data"
-              hx-swap="innerHTML">
+              hx-swap="innerHTML"
+              hx-select="option">
         {% for f in funcionarios %}
           <option value="{{ f.id }}">{{ f.nome }}</option>
         {% endfor %}
@@ -48,17 +49,18 @@
     <div class="mb-3">
       <label for="data" class="form-label">Data</label>
       <input type="date" class="form-control" id="data" name="data"
-             value="{{ dia|date:'Y-m-d' }}"
-             hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
-             hx-trigger="change"
-             hx-target="#slot"
-             hx-include="#funcionario"
-             hx-swap="innerHTML">
+          value="{{ dia|date:'Y-m-d' }}"
+          hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
+          hx-trigger="change"
+          hx-target="#slot-modal"
+          hx-include="#funcionario"
+          hx-swap="innerHTML"
+          hx-select="option">   
     </div>
 
     <div class="mb-3">
-      <label for="slot" class="form-label">Horário</label>
-      <select class="form-select" id="slot" name="slot">
+      <label for="slot-modal" class="form-label">Horário</label>
+      <select class="form-select" id="slot-modal" name="slot">
         {% include 'accounts/partials/slot_options.html' %}
       </select>
     </div>

@@ -2,11 +2,11 @@
 <p>{{ funcionario.nome }} –
 {% for s in servicos %}{{ s.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
 
-<form method="get" hx-get="{% url 'appointments:agendamento_datahora' %}" hx-target="#step-container" class="mb-3">
+<form method="get" hx-get="{% url 'appointments:agendamento_datahora' %}"
+      hx-target="#step-container" hx-trigger="change" class="mb-3">
   <div class="mb-3">
     {{ form.data.label_tag }} {{ form.data }}
   </div>
-  <button type="submit" class="btn btn-secondary">Ver horários</button>
 </form>
 
 {% if form.hora.field.choices %}
