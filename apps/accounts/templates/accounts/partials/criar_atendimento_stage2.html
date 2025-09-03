@@ -1,0 +1,43 @@
+{# Requer contexto: funcionarios, servicos, dia #}
+
+<div class="mb-3">
+  <label for="funcionario" class="form-label">Funcionário</label>
+  <select class="form-select" id="funcionario" name="funcionario"
+          hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
+          hx-trigger="change"
+          hx-target="#slot"
+          hx-include="#data"
+          hx-swap="innerHTML">
+    {% for f in funcionarios %}
+      <option value="{{ f.id }}">{{ f.nome }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="mb-3">
+  <label for="servicos" class="form-label">Serviços</label>
+  <select class="form-select" id="servicos" name="servicos" multiple>
+    {% for s in servicos %}
+      <option value="{{ s.id }}">{{ s.nome }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="mb-3">
+  <label for="data" class="form-label">Data</label>
+  <input type="date" class="form-control" id="data" name="data"
+         value="{{ dia|date:'Y-m-d' }}"
+         hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
+         hx-trigger="change"
+         hx-target="#slot"
+         hx-include="#funcionario"
+         hx-swap="innerHTML">
+</div>
+
+<div class="mb-3" id="slot-wrapper">
+  <label for="slot" class="form-label">Horário</label>
+  <select class="form-select" id="slot" name="slot">
+    {# Inicialmente vazio até ter funcionario+data; pode mostrar placeholder #}
+    <option value="">Selecione funcionário e data</option>
+  </select>
+</div>
