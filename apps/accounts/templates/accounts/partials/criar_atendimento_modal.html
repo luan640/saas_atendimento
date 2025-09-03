@@ -28,16 +28,13 @@
               hx-get="{% url 'accounts:owner_atendimento_loja' %}"
               hx-trigger="change"
               hx-target="#loja-fields"
-              hx-swap="innerHTML">
+              hx-swap="outerHTML">
         {% for l in lojas %}
           <option value="{{ l.id }}"{% if loja and loja.id == l.id %} selected{% endif %}>{{ l.nome }}</option>
         {% endfor %}
       </select>
     </div>
-
-    <div id="loja-fields">
-      {% include 'accounts/partials/criar_atendimento_loja_fields.html' %}
-    </div>
+    {% include 'accounts/partials/criar_atendimento_loja_fields.html' %}
   </form>
 </div>
   <div class="modal-footer">
