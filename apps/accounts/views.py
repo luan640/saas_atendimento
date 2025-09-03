@@ -201,14 +201,12 @@ def owner_atendimento_loja(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
     loja_id = request.GET.get('loja')
-    if not loja_id:
-        return HttpResponse('Loja não informada', status=400)
-    loja = get_object_or_404(Loja, pk=loja_id, owner=request.user, ativa=True)
-    funcionarios = Funcionario.objects.filter(loja=loja, ativo=True).order_by('nome')
-    servicos = Servico.objects.filter(loja=loja, ativo=True).order_by('nome')
+    loja = get_object_or_404(Loja, pk=loja_id, owner=request.user, ativa=True) if loja_id else None
+    funcionarios = Funcionario.objects.filter(loja=loja, ativo=True).order_by('nome') if loja else Funcionario.objects.none()
+    servicos = Servico.objects.filter(loja=loja, ativo=True).order_by('nome') if loja else Servico.objects.none()
     dia = timezone.now().date()
     slots = []
-    if funcionarios.exists():
+    if loja and funcionarios.exists():
         slots = gerar_slots_disponiveis(funcionarios.first(), dia)
     ctx = {
         'funcionarios': funcionarios,

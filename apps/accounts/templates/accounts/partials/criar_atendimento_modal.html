@@ -28,6 +28,7 @@
               hx-get="{% url 'accounts:owner_atendimento_loja' %}"
               hx-trigger="change"
               hx-target="#loja-fields"
+              hx-vals='js:{loja: this.value}'
               hx-swap="innerHTML">
         {% for l in lojas %}
           <option value="{{ l.id }}"{% if loja and loja.id == l.id %} selected{% endif %}>{{ l.nome }}</option>
