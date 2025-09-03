@@ -3,7 +3,7 @@
   <select class="form-select" id="funcionario" name="funcionario"
           hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
           hx-trigger="change"
-          hx-target="#slot"
+          hx-target="#modalShellLarge #slot"
           hx-include="#data"
           hx-swap="innerHTML">
     {% for f in funcionarios %}

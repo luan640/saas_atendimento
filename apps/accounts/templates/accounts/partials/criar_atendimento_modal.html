@@ -46,7 +46,7 @@
              value="{{ dia|date:'Y-m-d' }}"
              hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
              hx-trigger="change"
-             hx-target="#slot"
+             hx-target="#modalShellLarge #slot"
              hx-include="#funcionario"
              hx-swap="innerHTML">
     </div>
