@@ -127,22 +127,29 @@ def owner_criar_atendimento(request):
         return redirect('accounts:owner_login')
     if request.method == 'POST':
         cliente_id = request.POST.get('cliente')
+        loja_id = request.POST.get('loja')
         funcionario_id = request.POST.get('funcionario')
         servicos_ids = request.POST.getlist('servicos')
         data_str = request.POST.get('data')
         hora_str = request.POST.get('slot')
 
-        if not (cliente_id and funcionario_id and servicos_ids and data_str and hora_str):
-            funcionarios = Funcionario.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
-            servicos = Servico.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
+        if not (cliente_id and loja_id and funcionario_id and servicos_ids and data_str and hora_str):
+            lojas = request.user.lojas.filter(ativa=True).order_by('nome')
+            loja = get_object_or_404(Loja, pk=loja_id, owner=request.user, ativa=True) if loja_id else lojas.first()
+            funcionarios = Funcionario.objects.filter(loja=loja, ativo=True).order_by('nome') if loja else Funcionario.objects.none()
+            servicos = Servico.objects.filter(loja=loja, ativo=True).order_by('nome') if loja else Servico.objects.none()
             dia = date.fromisoformat(data_str) if data_str else timezone.now().date()
             slots = []
-            if funcionario_id and data_str:
-                funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja__owner=request.user, ativo=True)
+            if funcionario_id and data_str and loja:
+                funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja=loja, ativo=True)
                 slots = gerar_slots_disponiveis(funcionario, dia)
+            elif funcionarios.exists() and data_str:
+                slots = gerar_slots_disponiveis(funcionarios.first(), dia)
             clientes = request.user.clientes.select_related('user').order_by('user__full_name')
             ctx = {
                 'clientes': clientes,
+                'lojas': lojas,
+                'loja_atual': loja,
                 'funcionarios': funcionarios,
                 'servicos': servicos,
                 'slots': slots,
@@ -154,14 +161,15 @@ def owner_criar_atendimento(request):
             resp['HX-Reswap'] = 'innerHTML'
             return resp
 
+        loja = get_object_or_404(Loja, pk=loja_id, owner=request.user, ativa=True)
         cliente = get_object_or_404(User, pk=cliente_id, is_client=True)
-        funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja__owner=request.user, ativo=True)
-        servicos_qs = Servico.objects.filter(pk__in=servicos_ids, loja=funcionario.loja, ativo=True)
+        funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja=loja, ativo=True)
+        servicos_qs = Servico.objects.filter(pk__in=servicos_ids, loja=loja, ativo=True)
         dia = date.fromisoformat(data_str)
         hora = time.fromisoformat(hora_str)
         ag = Agendamento.objects.create(
             cliente=cliente,
-            loja=funcionario.loja,
+            loja=loja,
             funcionario=funcionario,
             data=dia,
             hora=hora,
@@ -170,14 +178,18 @@ def owner_criar_atendimento(request):
         return owner_home_agendamentos(request)
 
     clientes = request.user.clientes.select_related('user').order_by('user__full_name')
-    funcionarios = Funcionario.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
-    servicos = Servico.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
+    lojas = request.user.lojas.filter(ativa=True).order_by('nome')
+    loja = lojas.first()
+    funcionarios = Funcionario.objects.filter(loja=loja, ativo=True).order_by('nome') if loja else Funcionario.objects.none()
+    servicos = Servico.objects.filter(loja=loja, ativo=True).order_by('nome') if loja else Servico.objects.none()
     dia = timezone.now().date()
     slots = []
     if funcionarios.exists():
         slots = gerar_slots_disponiveis(funcionarios.first(), dia)
     ctx = {
         'clientes': clientes,
+        'lojas': lojas,
+        'loja_atual': loja,
         'funcionarios': funcionarios,
         'servicos': servicos,
         'slots': slots,
@@ -231,6 +243,33 @@ def owner_slots_disponiveis(request):
     return render(
         request, 'accounts/partials/slot_options.html', {'slots': slots}
     )
+
+
+@login_required
+@subscription_required
+def owner_criar_atendimento_loja(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    loja_id = request.GET.get('loja')
+    data_str = request.GET.get('data')
+    if not loja_id:
+        return HttpResponse('Dados insuficientes', status=400)
+
+    loja = get_object_or_404(Loja, pk=loja_id, owner=request.user, ativa=True)
+    funcionarios = loja.funcionarios.filter(ativo=True).order_by('nome')
+    servicos = loja.servicos.filter(ativo=True).order_by('nome')
+    dia = date.fromisoformat(data_str) if data_str else timezone.now().date()
+    slots = []
+    if funcionarios.exists():
+        slots = gerar_slots_disponiveis(funcionarios.first(), dia)
+
+    ctx = {
+        'funcionarios': funcionarios,
+        'servicos': servicos,
+        'slots': slots,
+    }
+    return render(request, 'accounts/partials/criar_atendimento_loja_dependent.html', ctx)
 
 @login_required
 @subscription_required
