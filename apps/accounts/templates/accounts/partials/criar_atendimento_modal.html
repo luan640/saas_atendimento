@@ -9,7 +9,7 @@
         hx-select="#agendamentos-section"
         hx-swap="outerHTML"
         hx-indicator="#dash-loading"
-        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge')).hide(); } catch(e) {} }">
+         hx-on="htmx:afterRequest: if (event.target.id === 'formCriarAtendimento' && event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShellLarge')).hide(); } catch(e) {} }">
     {% csrf_token %}
     <div class="mb-3">
       <label for="cliente" class="form-label">Cliente</label>
@@ -23,44 +23,20 @@
     </div>
 
     <div class="mb-3">
-      <label for="funcionario" class="form-label">Funcionário</label>
-      <select class="form-select" id="funcionario" name="funcionario"
-              hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
+      <label for="loja" class="form-label">Loja</label>
+      <select class="form-select" id="loja" name="loja"
+              hx-get="{% url 'accounts:owner_atendimento_loja' %}"
               hx-trigger="change"
-              hx-target="#slot"
-              hx-include="#data"
+              hx-target="#loja-fields"
               hx-swap="innerHTML">
-        {% for f in funcionarios %}
-          <option value="{{ f.id }}">{{ f.nome }}</option>
+        {% for l in lojas %}
+          <option value="{{ l.id }}"{% if loja and loja.id == l.id %} selected{% endif %}>{{ l.nome }}</option>
         {% endfor %}
       </select>
     </div>
 
-    <div class="mb-3">
-      <label for="servicos" class="form-label">Serviços</label>
-      <select class="form-select" id="servicos" name="servicos" multiple>
-        {% for s in servicos %}
-          <option value="{{ s.id }}">{{ s.nome }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="mb-3">
-      <label for="data" class="form-label">Data</label>
-      <input type="date" class="form-control" id="data" name="data"
-             value="{{ dia|date:'Y-m-d' }}"
-             hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
-             hx-trigger="change"
-             hx-target="#slot"
-             hx-include="#funcionario"
-             hx-swap="innerHTML">
-    </div>
-
-    <div class="mb-3">
-      <label for="slot" class="form-label">Horário</label>
-      <select class="form-select" id="slot" name="slot">
-        {% include 'accounts/partials/slot_options.html' %}
-      </select>
+    <div id="loja-fields">
+      {% include 'accounts/partials/criar_atendimento_loja_fields.html' %}
     </div>
   </form>
 </div>
