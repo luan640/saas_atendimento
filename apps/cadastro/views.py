@@ -13,6 +13,8 @@ from .forms import (
 )
 from apps.accounts.decorators import subscription_required
 
+import json
+
 # ========== UTILITÁRIAS ==========
 
 def _get_loja_ativa(request, lojas_qs):
@@ -26,7 +28,6 @@ def _get_loja_ativa(request, lojas_qs):
         except (ValueError, TypeError):
             loja = None
     return loja or lojas_qs.first()
-
 
 def _agenda_formset(instance, data=None):
     """Cria formset da agenda semanal preenchendo os dias faltantes."""
@@ -85,6 +86,45 @@ def _aplica_filtros(qs, filtros):
             pass
     return qs.distinct()
 
+def _collect_errors_for_toast(form, formset=None) -> str:
+    # 1) non-field do form (inclui ValidationError de clean() do Model/Form)
+    nf = list(form.non_field_errors())
+    if nf:
+        return nf[0]  # primeira mensagem é o suficiente para toast
+
+    # 2) erros de campo do form
+    for field_name, errs in form.errors.items():
+        if field_name == "__all__":
+            continue
+        label = getattr(form.fields.get(field_name), 'label', field_name)
+        for e in errs:
+            if e:
+                return f"{label}: {e}"
+
+    # 3) non-form do formset
+    if formset:
+        nfs = list(formset.non_form_errors())
+        if nfs:
+            return nfs[0]
+
+        # 4) erros por formulário do formset (campo ou non-field)
+        for f in formset.forms:
+            # non-field do form do formset
+            nff = list(f.non_field_errors())
+            if nff:
+                return nff[0]
+            # campo do form do formset
+            for field_name, errs in f.errors.items():
+                if field_name == "__all__":
+                    continue
+                label = getattr(f.fields.get(field_name), 'label', field_name)
+                for e in errs:
+                    if e:
+                        return f"{label}: {e}"
+
+    # fallback
+    return "Erro ao salvar. Verifique os campos."
+
 # ========== SHOPS ==========
 
 @login_required
@@ -108,20 +148,30 @@ def owner_shops(request):
             if request.headers.get('HX-Request') and target != 'content':
                 # Limpa o form e devolve o parcial atualizado
                 form = LojaForm(user=request.user)
-                return render(request, 'cadastro/partials/owner_shops.html',
+                
+                response = render(request, 'cadastro/partials/owner_shops.html',
                               {'form': form, 'lojas': lojas})
+                response['HX-Trigger'] = json.dumps({
+                    "show-toast": {"text": "Loja criada!", "level": "success"}
+                })         
+                return response
 
             return redirect('cadastro:owner_shops')
         else:
-            # Form inválido → se for HTMX, devolve parcial com erros
+            errors_nf = list(form.non_field_errors())
+            msg = errors_nf[0] if errors_nf else "Erro ao salvar. Verifique os campos."
+
+            # Form inválido → se for HTMX, devolve parcial com erros            
             if request.headers.get('HX-Request') and target != 'content':
                 lojas = request.user.lojas.all().order_by('-criada_em')
                 # status 200 para evitar erro 422 no console do HTMX
-                return render(
-                    request,
-                    'cadastro/partials/owner_shops.html',
-                    {'form': form, 'lojas': lojas},
-                )
+
+                response = render(request, 'cadastro/partials/owner_shops.html', {'form': form, 'lojas': lojas})
+                response['HX-Trigger'] = json.dumps({
+                    "show-toast": {"text": msg, "level": "error"}
+                })
+
+                return response
 
     # GET
     form = LojaForm(user=request.user)
@@ -144,17 +194,30 @@ def owner_shop_edit(request, pk):
             form.save()
             messages.success(request, 'Loja atualizada com sucesso!')
             lojas = request.user.lojas.all().order_by('-criada_em')
-            return render(request, 'cadastro/partials/owner_shops.html', {'lojas': lojas})
+
+            response = render(request, 'cadastro/partials/owner_shops.html',
+                {'lojas': lojas})
+            response['HX-Trigger'] = json.dumps({
+                "show-toast": {"text": "Loja atualizada!", "level": "success"}
+            })         
+
+            return response
         else:
             # Retorna o corpo do modal com erros e orienta o HTMX a retargetar para o modal
             response = render(request, 'cadastro/partials/loja_form.html', {'form': form, 'loja': loja, 'acao': 'Editar Loja'})
+            
+            errors_nf = list(form.non_field_errors())
+            msg = errors_nf[0] if errors_nf else "Erro ao salvar. Verifique os campos."
+            
+            response['HX-Trigger'] = json.dumps({
+                "show-toast": {"text": msg, "level": "error"}
+            })
             response['HX-Retarget'] = '#modalShell .modal-content'
             return response
 
     # GET → carrega o formulário de edição dentro do modal
     form = LojaForm(instance=loja, user=request.user)
     return render(request, 'cadastro/partials/loja_form.html', {'form': form, 'loja': loja, 'acao': 'Editar Loja'})
-
 
 @login_required
 @subscription_required
@@ -166,7 +229,14 @@ def owner_shop_delete(request, pk):
         loja.delete()
         messages.success(request, 'Loja excluída com sucesso!')
         lojas = request.user.lojas.all().order_by('-criada_em')
-        return render(request, 'cadastro/partials/owner_shops.html', {'lojas': lojas})
+
+        response = render(request, 'cadastro/partials/owner_shops.html',
+            {'lojas': lojas})
+        response['HX-Trigger'] = json.dumps({
+            "show-toast": {"text": "Loja excluída!", "level": "success"}
+        })         
+
+        return response
 
     # GET → confirma a exclusão no modal
     return render(request, 'cadastro/partials/loja_confirm_delete.html', {'loja': loja})
@@ -211,19 +281,36 @@ def funcionarios(request):
             novo_inst = Funcionario(loja=loja)
             formset = _agenda_formset(novo_inst)
             ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
+            
             if request.headers.get('HX-Request') and target != 'content':
-                return render(request, 'cadastro/partials/funcionarios.html', ctx)
+                response = render(request, 'cadastro/partials/funcionarios.html', ctx)
+                response['HX-Trigger'] = json.dumps({
+                    "show-toast": {"text": "Funcionário criado!", "level": "success"}
+                })
+        
+                return response
+
             return redirect(f"{request.path}?loja_filtro={loja.id}")
 
         qs = loja.funcionarios.order_by('nome')
         ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
         if request.headers.get('HX-Request') and target != 'content':
-            # Retorna o corpo do modal com os erros de validação
+
+            errors_nf = list(form.non_field_errors())
+            msg = errors_nf[0] if errors_nf else "Erro ao salvar. Verifique os campos."
+            
             resp = render(request, 'cadastro/funcionarios.html', ctx)
+
+            resp['HX-Trigger'] = json.dumps({
+                "show-toast": {"text": msg, "level": "error"}
+            })
+
+            # Retorna o corpo do modal com os erros de validação
             resp['HX-Retarget'] = '#modal-funcionario-body'
             resp['HX-Reselect'] = '#modal-funcionario-body'
             resp['HX-Reswap'] = 'outerHTML'
             return resp
+        
         return render(request, 'cadastro/funcionarios.html', ctx)
 
     # GET
@@ -263,15 +350,24 @@ def funcionario_edit(request, pk):
             funcionarios_qs = (loja.funcionarios.order_by('nome') if loja else [])
             ctx = {'lojas': lojas_qs, 'loja': loja, 'funcionarios': funcionarios_qs}
 
-            # devolve apenas o <tbody> para substituir na tabela
-            return render(request, 'cadastro/partials/funcionarios.html', ctx)
+            response = render(request, 'cadastro/partials/funcionarios.html', ctx)
+            response['HX-Trigger'] = json.dumps({
+                "show-toast": {"text": "Funcionário atualizado!", "level": "success"}
+            })
+    
+            return response
 
-        # Erros de validação → atualizar APENAS o modal
+        # --- ERROS (inclui ValidationError do clean) ---
+        msg = _collect_errors_for_toast(form, formset)
         resp = render(
             request,
             'cadastro/partials/funcionario_form.html',
             {'form': form, 'formset': formset, 'funcionario': func, 'acao': 'Editar funcionário'},
+            status=422
         )
+        resp['HX-Trigger'] = json.dumps({
+            "show-toast": {"text": msg, "level": "error"}
+        })
         resp['HX-Retarget'] = '#modalFuncionario .modal-content'
         return resp
 
@@ -303,7 +399,13 @@ def funcionario_delete(request, pk):
         loja = _get_loja_ativa(request, lojas_qs)
         funcionarios_qs = (loja.funcionarios.order_by('nome') if loja else [])
         ctx = {'lojas': lojas_qs, 'loja': loja, 'funcionarios': funcionarios_qs}
-        return render(request, 'cadastro/partials/funcionarios.html', ctx)
+
+        response = render(request, 'cadastro/partials/funcionarios.html', ctx)
+        response['HX-Trigger'] = json.dumps({
+            "show-toast": {"text": "Funcionário excluído!", "level": "success"}
+        })
+
+        return response
 
     # GET → confirma a exclusão
     return render(request, 'cadastro/partials/funcionario_confirm_delete.html', {'funcionario': func})
@@ -317,9 +419,6 @@ def servicos(request):
         return redirect('accounts:owner_login')
 
     lojas_qs = request.user.lojas.order_by('nome')
-
-
-    # loja selecionada para filtragem da lista
     loja_id = (request.GET.get('loja_filtro') or request.POST.get('loja_filtro') or
                request.GET.get('loja') or request.POST.get('loja'))
     loja = None
@@ -330,13 +429,11 @@ def servicos(request):
             loja = None
     loja = loja or lojas_qs.first()
 
-    # se não há loja, renderiza vazio
     if not loja:
         ctx = {'lojas': lojas_qs, 'loja': None, 'form': None, 'servicos': [], 'filtros': {}, 'profissionais': []}
         tpl = 'cadastro/partials/servicos.html' if (request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content') else 'cadastro/servicos.html'
         return render(request, tpl, ctx)
 
-    # filtros
     filtros = _parse_filtros(request)
 
     if request.method == 'POST':
@@ -345,9 +442,11 @@ def servicos(request):
             obj = form.save(commit=False)
             obj.save()
             form.save_m2m()
-            messages.success(request, 'Serviço salvo!')
-            # depois de salvar, recarrega a lista já com filtros
-            qs = _aplica_filtros(loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'), filtros)
+
+            qs = _aplica_filtros(
+                loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'),
+                filtros
+            )
             ctx = {
                 'lojas': lojas_qs,
                 'loja': loja,
@@ -357,13 +456,23 @@ def servicos(request):
                 'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
                 'form_salvo': True,
             }
+
+            # Se for HTMX, retorna parcial + evento de toast
             if request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content':
-                # devolve só o tbody; a modal fecha via hx-on no template
-                return render(request, 'cadastro/partials/servicos.html', ctx)
+                response = render(request, 'cadastro/partials/servicos.html', ctx)
+                response['HX-Trigger'] = json.dumps({
+                    "show-toast": {"text": "Serviço salvo!", "level": "success"}
+                })
+                return response
+
+            # Navegação normal
             return redirect(f"{request.path}?loja_filtro={loja.id}")
+
         else:
-            # form inválido: renderiza página completa (não-HTMX) ou tbody (HTMX) sem quebrar o alvo
-            qs = _aplica_filtros(loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'), filtros)
+            qs = _aplica_filtros(
+                loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'),
+                filtros
+            )
             ctx = {
                 'lojas': lojas_qs,
                 'loja': loja,
@@ -373,10 +482,19 @@ def servicos(request):
                 'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
             }
             tpl = 'cadastro/partials/servicos.html' if (request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content') else 'cadastro/servicos.html'
+            response = render(request, tpl, ctx, status=422)
 
-            return render(request, tpl, ctx, status=422)
+            # --- ERROS (inclui ValidationError do clean) ---
+            errors_nf = list(form.non_field_errors())
+            msg = errors_nf[0] if errors_nf else "Erro ao salvar. Verifique os campos."
+            
+            response['HX-Trigger'] = json.dumps({
+                "show-toast": {"text": msg, "level": "error"}
+            })
 
-    # GET (lista com filtros)
+            return response
+
+    # GET
     form = ServicoForm(lojas=lojas_qs, initial={'loja': loja})
     qs = _aplica_filtros(loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'), filtros)
     ctx = {
@@ -405,7 +523,6 @@ def servico_form(request):
 @login_required
 @subscription_required
 def servico_edit(request, pk):
-    """Edita um serviço via HTMX (modal)."""
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
 
@@ -418,15 +535,12 @@ def servico_edit(request, pk):
             obj = form.save(commit=False)
             obj.save()
             form.save_m2m()
-            messages.success(request, 'Serviço atualizado!')
 
-            # Recarrega lista com a loja/filtros atuais
+            # sucesso -> 200 (seu hx-on fecha o modal) + atualiza a lista
             loja = _get_loja_ativa(request, lojas_qs)
             filtros = _parse_filtros(request)
             qs = _aplica_filtros(
-                loja.servicos.select_related('loja')
-                             .prefetch_related('profissionais')
-                             .order_by('nome'),
+                loja.servicos.select_related('loja').prefetch_related('profissionais').order_by('nome'),
                 filtros
             )
             ctx = {
@@ -436,19 +550,29 @@ def servico_edit(request, pk):
                 'filtros': filtros,
                 'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
             }
-            return render(request, 'cadastro/partials/servicos.html', ctx)
+            response = render(request, 'cadastro/partials/servicos.html', ctx)
+            response['HX-Trigger'] = json.dumps({"show-toast": {"text": "Serviço atualizado!", "level": "success"}})
+            return response
 
-        # Erros de validação -> mantém no modal
-        resp = render(request, 'cadastro/partials/servico_form_edit.html',
-                      {'form': form, 'servico': serv, 'acao': 'Editar serviço'})
-        resp['HX-Retarget'] = '#modalServicoOps .modal-content'
-        return resp
+        # ------ ERROS: manter o modal aberto ------
+        errors_nf = list(form.non_field_errors())
+        msg = errors_nf[0] if errors_nf else "Erro ao salvar. Verifique os campos."
+
+        response = render(
+            request,
+            'cadastro/partials/servico_form_edit.html',
+            {'form': form, 'servico': serv, 'acao': 'Editar serviço'},
+            status=422   # <- IMPORTANTE!
+        )
+        response['HX-Trigger'] = json.dumps({"show-toast": {"text": msg, "level": "error"}})
+        response['HX-Retarget'] = '#modalServicoOps .modal-content'  # garante swap no conteúdo do modal
+        response['HX-Reswap'] = 'innerHTML'  # opcional, explicita o swap
+        return response
 
     # GET -> carrega form no modal
     form = ServicoForm(instance=serv, lojas=lojas_qs)
     return render(request, 'cadastro/partials/servico_form_edit.html',
                   {'form': form, 'servico': serv, 'acao': 'Editar serviço'})
-
 
 @login_required
 @subscription_required
@@ -479,11 +603,20 @@ def servico_delete(request, pk):
             'filtros': filtros,
             'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
         }
+
+        # Se for HTMX, retorna parcial + evento de toast
+        if request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content':
+            response = render(request, 'cadastro/partials/servicos.html', ctx)
+            response['HX-Trigger'] = json.dumps({
+                "show-toast": {"text": "Serviço excluído!", "level": "success"}
+            })
+
+            return response
+
         return render(request, 'cadastro/partials/servicos.html', ctx)
 
     # GET -> confirma exclusão
     return render(request, 'cadastro/partials/servico_confirm_delete.html', {'servico': serv})
-
 
 # ======== CLIENTES ========
 
@@ -502,9 +635,17 @@ def clientes(request):
             Cliente.objects.create(owner=request.user, user=user)
             messages.success(request, 'Cliente cadastrado com sucesso!')
             qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
+            
             if request.headers.get('HX-Request') and target != 'content':
                 form = ClienteForm()
-                return render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+
+                response = render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+                response['HX-Trigger'] = json.dumps({
+                    "show-toast": {"text": "Cliente criado!", "level": "success"}
+                })
+
+                return response
+
             return redirect('cadastro:clientes')
 
         qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
@@ -514,7 +655,9 @@ def clientes(request):
             resp['HX-Retarget'] = '#modal-cliente-body'
             resp['HX-Reselect'] = '#modal-cliente-body'
             resp['HX-Reswap'] = 'outerHTML'
+
             return resp
+        
         return render(request, 'cadastro/clientes.html', ctx)
 
     form = ClienteForm()
@@ -522,7 +665,6 @@ def clientes(request):
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
     return render(request, 'cadastro/clientes.html', {'form': form, 'clientes': qs})
-
 
 @login_required
 @subscription_required
@@ -539,16 +681,23 @@ def cliente_edit(request, pk):
             form.save()
             messages.success(request, 'Cliente atualizado!')
             qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
-            return render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+                
+            response = render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+            response['HX-Trigger'] = json.dumps({
+                "show-toast": {"text": "Cliente atualizado!", "level": "success"}
+            })
+    
+            return response
+        
         resp = render(request, 'cadastro/partials/cliente_form_edit.html',
                       {'form': form, 'cliente': cliente, 'acao': 'Editar cliente'})
         resp['HX-Retarget'] = '#modalClienteOps .modal-content'
+        
         return resp
 
     form = ClienteForm(instance=user)
     return render(request, 'cadastro/partials/cliente_form_edit.html',
                   {'form': form, 'cliente': cliente, 'acao': 'Editar cliente'})
-
 
 @login_required
 @subscription_required
@@ -562,6 +711,12 @@ def cliente_delete(request, pk):
         cliente.user.delete()
         messages.success(request, 'Cliente excluído!')
         qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
-        return render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+        
+        response = render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
+        response['HX-Trigger'] = json.dumps({
+            "show-toast": {"text": "Cliente excluído!", "level": "success"}
+        })
+
+        return response
 
     return render(request, 'cadastro/partials/cliente_confirm_delete.html', {'cliente': cliente})
