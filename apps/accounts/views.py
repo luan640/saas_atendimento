@@ -1,4 +1,5 @@
 import random
+import json
 from datetime import date, timedelta, time
 from django.utils import timezone
 from django.contrib import messages
@@ -7,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.http import HttpResponse
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count, Avg
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
@@ -69,11 +70,56 @@ def owner_home(request):
     faturado = base.filter(confirmado=True, valor_final__isnull=False).aggregate(total=Sum('valor_final'))['total'] or 0
     agendamentos = base.count()
     no_show = base.filter(no_show=True).count()
+
+    # Métricas do dashboard (últimos 30 dias)
+    inicio_periodo = today - timedelta(days=30)
+    ag_confirmados = Agendamento.objects.filter(
+        loja__owner=request.user,
+        data__gte=inicio_periodo,
+        confirmado=True,
+        valor_final__isnull=False,
+    )
+
+    # Faturamento por loja
+    fat_loja_qs = ag_confirmados.values('loja__nome').annotate(total=Sum('valor_final')).order_by('loja__nome')
+    fat_loja_labels = [item['loja__nome'] for item in fat_loja_qs]
+    fat_loja_values = [float(item['total']) for item in fat_loja_qs]
+
+    # Faturamento por funcionário
+    fat_func_qs = ag_confirmados.values('funcionario__nome').annotate(total=Sum('valor_final')).order_by('funcionario__nome')
+    fat_func_labels = [item['funcionario__nome'] for item in fat_func_qs]
+    fat_func_values = [float(item['total']) for item in fat_func_qs]
+
+    # Atendimentos por dia (últimos 7 dias)
+    inicio_semana = today - timedelta(days=6)
+    dia_qs = Agendamento.objects.filter(loja__owner=request.user, data__gte=inicio_semana).values('data').annotate(total=Count('id')).order_by('data')
+    dia_labels = [item['data'].strftime('%d/%m') for item in dia_qs]
+    dia_values = [item['total'] for item in dia_qs]
+
+    # Serviços mais solicitados
+    serv_qs = Servico.objects.filter(loja__owner=request.user, agendamentos__isnull=False)
+    serv_qs = serv_qs.annotate(total=Count('agendamentos')).order_by('-total')[:5]
+    serv_labels = [s.nome for s in serv_qs]
+    serv_values = [s.total for s in serv_qs]
+
+    # Ticket médio
+    ticket_medio = ag_confirmados.aggregate(media=Avg('valor_final'))['media'] or 0
+    ticket_medio = float(ticket_medio)
+
     ctx = {
         'subscription': sub,
         'faturado_hoje': faturado,
         'agendamentos_hoje': agendamentos,
         'no_show_hoje': no_show,
+        'ticket_medio': ticket_medio,
+        'faturamento_lojas_labels': json.dumps(fat_loja_labels),
+        'faturamento_lojas_values': json.dumps(fat_loja_values),
+        'faturamento_func_labels': json.dumps(fat_func_labels),
+        'faturamento_func_values': json.dumps(fat_func_values),
+        'atendimentos_dias_labels': json.dumps(dia_labels),
+        'atendimentos_dias_values': json.dumps(dia_values),
+        'servicos_labels': json.dumps(serv_labels),
+        'servicos_values': json.dumps(serv_values),
     }
     target = request.headers.get('HX-Target')
     if request.headers.get('HX-Request') and target != 'content':
