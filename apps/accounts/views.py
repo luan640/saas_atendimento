@@ -81,7 +81,6 @@ def owner_home(request):
         return render(request, 'accounts/partials/owner_home.html', ctx)
     return render(request, 'accounts/owner_home.html', ctx)
 
-
 @login_required
 @subscription_required
 def owner_dashboard(request):
