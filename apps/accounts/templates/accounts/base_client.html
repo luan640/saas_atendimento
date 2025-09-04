@@ -13,11 +13,21 @@
 <body hx-boost="true" class="bg-light d-flex flex-column min-vh-100">
 
   <main class="flex-grow-1 container py-4" hx-history-elt>
-    {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-    {% endfor %}
     {% block content %}{% endblock %}
   </main>
+
+  {% if messages %}
+  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    {% for message in messages %}
+    <div class="toast align-items-center text-bg-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body">{{ message }}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   <footer class="text-center text-muted py-3 border-top">
     <small>&copy; {{ now|date:"Y" }} – Barber SaaS</small>
@@ -25,6 +35,18 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/htmx.org@1.9.8"></script>
+
+  {% if messages %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+      toastElList.forEach(function(toastEl) {
+        var toast = new bootstrap.Toast(toastEl);
+        toast.show();
+      });
+    });
+  </script>
+  {% endif %}
 
   {% block extra_js %}{% endblock %}
 </body>
