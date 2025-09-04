@@ -125,27 +125,44 @@ def owner_home_agendamentos(request):
 def owner_criar_atendimento(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
+
     if request.method == 'POST':
+        loja_id = request.POST.get('loja')                # <-- NOVO
         cliente_id = request.POST.get('cliente')
         funcionario_id = request.POST.get('funcionario')
         servicos_ids = request.POST.getlist('servicos')
         data_str = request.POST.get('data')
         hora_str = request.POST.get('slot')
 
+        # Se faltar algo, re-renderiza o modal no estado correto (com base em loja/func/data passados)
         if not (cliente_id and funcionario_id and servicos_ids and data_str and hora_str):
-            funcionarios = Funcionario.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
-            servicos = Servico.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
-            dia = date.fromisoformat(data_str) if data_str else timezone.now().date()
+            clientes = request.user.clientes.select_related('user').order_by('user__full_name')
+            lojas = request.user.lojas.order_by('nome')    # <-- NOVO
+
+            loja_sel = None
+            funcionarios = None
+            servicos = None
             slots = []
+
+            # Se a loja foi escolhida, monta etapa 2 já filtrada
+            if loja_id:
+                loja_sel = get_object_or_404(Loja, pk=loja_id, owner=request.user)
+                funcionarios = Funcionario.objects.filter(loja=loja_sel, ativo=True).order_by('nome')
+                servicos = Servico.objects.filter(loja=loja_sel, ativo=True).order_by('nome')
+
+            # Se já temos func + data, pré-carrega slots
+            dia = date.fromisoformat(data_str) if data_str else timezone.now().date()
             if funcionario_id and data_str:
                 funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja__owner=request.user, ativo=True)
                 slots = gerar_slots_disponiveis(funcionario, dia)
-            clientes = request.user.clientes.select_related('user').order_by('user__full_name')
+
             ctx = {
                 'clientes': clientes,
-                'funcionarios': funcionarios,
-                'servicos': servicos,
-                'slots': slots,
+                'lojas': lojas,               # <-- NOVO
+                'loja_sel': loja_sel,         # <-- NOVO (para marcar selected)
+                'funcionarios': funcionarios, # <-- pode ser None se loja não escolhida
+                'servicos': servicos,         # <--
+                'slots': slots,               # <--
                 'dia': dia,
             }
             resp = render(request, 'accounts/partials/criar_atendimento_modal.html', ctx, status=422)
@@ -154,11 +171,16 @@ def owner_criar_atendimento(request):
             resp['HX-Reswap'] = 'innerHTML'
             return resp
 
+        # Validações finais (consistência loja x funcionario)
         cliente = get_object_or_404(User, pk=cliente_id, is_client=True)
         funcionario = get_object_or_404(Funcionario, pk=funcionario_id, loja__owner=request.user, ativo=True)
+        if loja_id and str(funcionario.loja_id) != str(loja_id):
+            return HttpResponse('Funcionário não pertence à loja selecionada.', status=422)
+
         servicos_qs = Servico.objects.filter(pk__in=servicos_ids, loja=funcionario.loja, ativo=True)
         dia = date.fromisoformat(data_str)
         hora = time.fromisoformat(hora_str)
+
         ag = Agendamento.objects.create(
             cliente=cliente,
             loja=funcionario.loja,
@@ -169,19 +191,18 @@ def owner_criar_atendimento(request):
         ag.servicos.set(servicos_qs)
         return owner_home_agendamentos(request)
 
+    # GET: etapa 1 (Loja + Cliente)
     clientes = request.user.clientes.select_related('user').order_by('user__full_name')
-    funcionarios = Funcionario.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
-    servicos = Servico.objects.filter(loja__owner=request.user, ativo=True).order_by('nome')
-    dia = timezone.now().date()
-    slots = []
-    if funcionarios.exists():
-        slots = gerar_slots_disponiveis(funcionarios.first(), dia)
+    lojas = request.user.lojas.order_by('nome')
+
     ctx = {
         'clientes': clientes,
-        'funcionarios': funcionarios,
-        'servicos': servicos,
-        'slots': slots,
-        'dia': dia,
+        'lojas': lojas,
+        'loja_sel': None,
+        'funcionarios': None,   # etapa 2 virá por AJAX
+        'servicos': None,
+        'slots': [],
+        'dia': timezone.now().date(),
     }
     return render(request, 'accounts/partials/criar_atendimento_modal.html', ctx)
 
@@ -230,6 +251,29 @@ def owner_slots_disponiveis(request):
     slots = gerar_slots_disponiveis(funcionario, dia)
     return render(
         request, 'accounts/partials/slot_options.html', {'slots': slots}
+    )
+
+@login_required
+@subscription_required
+def owner_fields_by_loja(request):
+    if not getattr(request.user, 'is_owner', False):
+        return HttpResponse(status=403)
+
+    loja_id = request.GET.get('loja')
+    if not loja_id:
+        return HttpResponse('Loja não informada', status=400)
+
+    loja = get_object_or_404(Loja, pk=loja_id, owner=request.user)
+
+    funcionarios = Funcionario.objects.filter(loja=loja, ativo=True).order_by('nome')
+    servicos = Servico.objects.filter(loja=loja, ativo=True).order_by('nome')
+
+    dia = timezone.now().date()
+
+    return render(
+        request,
+        'accounts/partials/criar_atendimento_stage2.html',
+        {'funcionarios': funcionarios, 'servicos': servicos, 'dia': dia}
     )
 
 @login_required
