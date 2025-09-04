@@ -34,7 +34,7 @@
               hx-target="#stage2-modal"
               hx-swap="outerHTML"
               hx-disinherit="hx-select hx-target"
-              hx-select="*">
+              hx-select="#stage2-modal">
         <option value="">Selecione...</option>
         {% for l in lojas %}
           <option value="{{ l.id }}" {% if loja_sel and loja_sel.id == l.id %}selected{% endif %}>{{ l.nome }}</option>
