@@ -1,110 +1,35 @@
-{% load static %}
-<div class="row mb-4">
-  <div class="col-md-3">
+<div class="row">
+  <div class="col-md-4">
     <div class="card">
-      <div class="card-header">Faturado Hoje</div>
+      <div class="card-header">
+        Faturado Hoje
+      </div>
       <div class="card-body">
         <p class="card-text">R$ {{ faturado_hoje|floatformat:2 }}</p>
       </div>
     </div>
   </div>
 
-  <div class="col-md-3">
+  <div class="col-md-4">
     <div class="card">
-      <div class="card-header">Agendamentos hoje</div>
+      <div class="card-header">
+        Agendamentos hoje
+      </div>
       <div class="card-body">
         <p class="card-text">{{ agendamentos_hoje }}</p>
       </div>
     </div>
   </div>
 
-  <div class="col-md-3">
+  <div class="col-md-4">
     <div class="card">
-      <div class="card-header">Cancelamentos</div>
+      <div class="card-header">
+        Cancelamentos
+      </div>
       <div class="card-body">
         <p class="card-text">{{ no_show_hoje }}</p>
       </div>
     </div>
   </div>
-
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-header">Ticket médio</div>
-      <div class="card-body">
-        <p class="card-text">R$ {{ ticket_medio|floatformat:2 }}</p>
-      </div>
-    </div>
-  </div>
 </div>
-
-<div class="row">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">Faturamento por Loja</div>
-      <div class="card-body">
-        <div id="chart_faturamento_loja"></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">Atendimentos por Dia</div>
-      <div class="card-body">
-        <div id="chart_atendimentos_dia"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row mt-4">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">Serviços mais solicitados</div>
-      <div class="card-body">
-        <div id="chart_servicos"></div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">Faturamento por Funcionário</div>
-      <div class="card-body">
-        <div id="chart_faturamento_func"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script src="{% static 'libs/apexcharts/dist/apexcharts.min.js' %}"></script>
-<script>
-(function() {
-  var chartLoja = new ApexCharts(document.querySelector('#chart_faturamento_loja'), {
-    chart: { type: 'bar', height: 300 },
-    series: [{ name: 'Faturamento', data: {{ faturamento_lojas_values|safe }} }],
-    xaxis: { categories: {{ faturamento_lojas_labels|safe }} }
-  });
-  chartLoja.render();
-
-  var chartDia = new ApexCharts(document.querySelector('#chart_atendimentos_dia'), {
-    chart: { type: 'line', height: 300 },
-    series: [{ name: 'Atendimentos', data: {{ atendimentos_dias_values|safe }} }],
-    xaxis: { categories: {{ atendimentos_dias_labels|safe }} }
-  });
-  chartDia.render();
-
-  var chartServ = new ApexCharts(document.querySelector('#chart_servicos'), {
-    chart: { type: 'pie', height: 300 },
-    series: {{ servicos_values|safe }},
-    labels: {{ servicos_labels|safe }}
-  });
-  chartServ.render();
-
-  var chartFunc = new ApexCharts(document.querySelector('#chart_faturamento_func'), {
-    chart: { type: 'bar', height: 300 },
-    series: [{ name: 'Faturamento', data: {{ faturamento_func_values|safe }} }],
-    xaxis: { categories: {{ faturamento_func_labels|safe }} }
-  });
-  chartFunc.render();
-})();
-</script>
 

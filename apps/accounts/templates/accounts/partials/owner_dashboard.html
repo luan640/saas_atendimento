@@ -1,0 +1,120 @@
+{% load static %}
+<form method="get" class="row g-3 mb-4">
+  <div class="col-md-3">
+    <label class="form-label">Início</label>
+    <input type="date" name="start" class="form-control" value="{{ start|date:'Y-m-d' }}">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Fim</label>
+    <input type="date" name="end" class="form-control" value="{{ end|date:'Y-m-d' }}">
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Lojas</label>
+    <select name="lojas" class="form-select" multiple>
+      {% for loja in lojas %}
+        <option value="{{ loja.id }}" {% if loja.id in lojas_ids %}selected{% endif %}>{{ loja.nome }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2 d-flex align-items-end">
+    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">No-show</div>
+      <div class="card-body">
+        <p class="mb-1">Quantidade: {{ no_show_count }}</p>
+        <p class="mb-0">Percentual: {{ no_show_percent|floatformat:2 }}%</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Ticket médio por loja</div>
+      <div class="card-body"><div id="chart_ticket_medio"></div></div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Faturamento por funcionário</div>
+      <div class="card-body"><div id="chart_faturamento_func"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">Faturamento por dia por loja</div>
+      <div class="card-body"><div id="chart_faturamento_dia"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">Agendamentos por dia por loja</div>
+      <div class="card-body"><div id="chart_agendamentos_dia"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  {% for serv in servicos_por_loja %}
+  <div class="col-md-4 mb-4">
+    <div class="card">
+      <div class="card-header">Serviços - {{ serv.loja }}</div>
+      <div class="card-body"><div id="pie_servicos_{{ forloop.counter }}"></div></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<script src="{% static 'libs/apexcharts/dist/apexcharts.min.js' %}"></script>
+<script>
+(function() {
+  var ticketChart = new ApexCharts(document.querySelector('#chart_ticket_medio'), {
+    chart: { type: 'bar', height: 300 },
+    series: [{ name: 'Ticket médio', data: {{ ticket_medio_values|safe }} }],
+    xaxis: { categories: {{ ticket_medio_labels|safe }} }
+  });
+  ticketChart.render();
+
+  var fatFunc = new ApexCharts(document.querySelector('#chart_faturamento_func'), {
+    chart: { type: 'bar', height: 300 },
+    series: [{ name: 'Faturamento', data: {{ fat_func_values|safe }} }],
+    xaxis: { categories: {{ fat_func_labels|safe }} }
+  });
+  fatFunc.render();
+
+  var fatDia = new ApexCharts(document.querySelector('#chart_faturamento_dia'), {
+    chart: { type: 'line', height: 300 },
+    series: {{ fat_dia_series|safe }},
+    xaxis: { categories: {{ dia_labels|safe }} }
+  });
+  fatDia.render();
+
+  var agDia = new ApexCharts(document.querySelector('#chart_agendamentos_dia'), {
+    chart: { type: 'line', height: 300 },
+    series: {{ ag_dia_series|safe }},
+    xaxis: { categories: {{ dia_labels|safe }} }
+  });
+  agDia.render();
+
+  {% for serv in servicos_por_loja %}
+  var pie{{ forloop.counter }} = new ApexCharts(document.querySelector('#pie_servicos_{{ forloop.counter }}'), {
+    chart: { type: 'pie', height: 300 },
+    labels: {{ serv.labels|safe }},
+    series: {{ serv.values|safe }}
+  });
+  pie{{ forloop.counter }}.render();
+  {% endfor %}
+})();
+</script>

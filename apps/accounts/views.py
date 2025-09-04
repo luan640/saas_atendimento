@@ -70,61 +70,101 @@ def owner_home(request):
     faturado = base.filter(confirmado=True, valor_final__isnull=False).aggregate(total=Sum('valor_final'))['total'] or 0
     agendamentos = base.count()
     no_show = base.filter(no_show=True).count()
-
-    # Métricas do dashboard (últimos 30 dias)
-    inicio_periodo = today - timedelta(days=30)
-    ag_confirmados = Agendamento.objects.filter(
-        loja__owner=request.user,
-        data__gte=inicio_periodo,
-        confirmado=True,
-        valor_final__isnull=False,
-    )
-
-    # Faturamento por loja
-    fat_loja_qs = ag_confirmados.values('loja__nome').annotate(total=Sum('valor_final')).order_by('loja__nome')
-    fat_loja_labels = [item['loja__nome'] for item in fat_loja_qs]
-    fat_loja_values = [float(item['total']) for item in fat_loja_qs]
-
-    # Faturamento por funcionário
-    fat_func_qs = ag_confirmados.values('funcionario__nome').annotate(total=Sum('valor_final')).order_by('funcionario__nome')
-    fat_func_labels = [item['funcionario__nome'] for item in fat_func_qs]
-    fat_func_values = [float(item['total']) for item in fat_func_qs]
-
-    # Atendimentos por dia (últimos 7 dias)
-    inicio_semana = today - timedelta(days=6)
-    dia_qs = Agendamento.objects.filter(loja__owner=request.user, data__gte=inicio_semana).values('data').annotate(total=Count('id')).order_by('data')
-    dia_labels = [item['data'].strftime('%d/%m') for item in dia_qs]
-    dia_values = [item['total'] for item in dia_qs]
-
-    # Serviços mais solicitados
-    serv_qs = Servico.objects.filter(loja__owner=request.user, agendamentos__isnull=False)
-    serv_qs = serv_qs.annotate(total=Count('agendamentos')).order_by('-total')[:5]
-    serv_labels = [s.nome for s in serv_qs]
-    serv_values = [s.total for s in serv_qs]
-
-    # Ticket médio
-    ticket_medio = ag_confirmados.aggregate(media=Avg('valor_final'))['media'] or 0
-    ticket_medio = float(ticket_medio)
-
     ctx = {
         'subscription': sub,
         'faturado_hoje': faturado,
         'agendamentos_hoje': agendamentos,
         'no_show_hoje': no_show,
-        'ticket_medio': ticket_medio,
-        'faturamento_lojas_labels': json.dumps(fat_loja_labels),
-        'faturamento_lojas_values': json.dumps(fat_loja_values),
-        'faturamento_func_labels': json.dumps(fat_func_labels),
-        'faturamento_func_values': json.dumps(fat_func_values),
-        'atendimentos_dias_labels': json.dumps(dia_labels),
-        'atendimentos_dias_values': json.dumps(dia_values),
-        'servicos_labels': json.dumps(serv_labels),
-        'servicos_values': json.dumps(serv_values),
     }
     target = request.headers.get('HX-Target')
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'accounts/partials/owner_home.html', ctx)
     return render(request, 'accounts/owner_home.html', ctx)
+
+
+@login_required
+@subscription_required
+def owner_dashboard(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    lojas_qs = request.user.lojas.order_by('nome')
+    loja_ids = request.GET.getlist('lojas')
+    if loja_ids:
+        lojas = lojas_qs.filter(id__in=loja_ids)
+    else:
+        lojas = lojas_qs
+        loja_ids = [str(l.id) for l in lojas]
+
+    end_str = request.GET.get('end')
+    start_str = request.GET.get('start')
+    end_date = date.fromisoformat(end_str) if end_str else timezone.now().date()
+    start_date = date.fromisoformat(start_str) if start_str else end_date - timedelta(days=30)
+
+    base = Agendamento.objects.filter(
+        loja__in=lojas,
+        data__range=[start_date, end_date]
+    )
+    confirmados = base.filter(confirmado=True, valor_final__isnull=False)
+
+    ticket_qs = confirmados.values('loja__nome').annotate(media=Avg('valor_final')).order_by('loja__nome')
+    ticket_labels = [t['loja__nome'] for t in ticket_qs]
+    ticket_values = [float(t['media']) for t in ticket_qs]
+
+    dias = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+    dia_labels = [d.strftime('%d/%m') for d in dias]
+
+    fat_series = []
+    for loja in lojas:
+        daily = confirmados.filter(loja=loja).values('data').annotate(total=Sum('valor_final'))
+        mapping = {item['data']: float(item['total']) for item in daily}
+        fat_series.append({'name': loja.nome, 'data': [mapping.get(d, 0) for d in dias]})
+
+    ag_series = []
+    for loja in lojas:
+        daily = base.filter(loja=loja).values('data').annotate(total=Count('id'))
+        mapping = {item['data']: item['total'] for item in daily}
+        ag_series.append({'name': loja.nome, 'data': [mapping.get(d, 0) for d in dias]})
+
+    servicos_por_loja = []
+    for loja in lojas:
+        serv_qs = (
+            Servico.objects.filter(loja=loja, agendamentos__in=base)
+            .annotate(total=Count('agendamentos'))
+            .order_by('-total')
+        )
+        labels = [s.nome for s in serv_qs]
+        values = [s.total for s in serv_qs]
+        servicos_por_loja.append({'loja': loja.nome, 'labels': json.dumps(labels), 'values': json.dumps(values)})
+
+    fat_func_qs = confirmados.values('funcionario__nome').annotate(total=Sum('valor_final')).order_by('funcionario__nome')
+    fat_func_labels = [f['funcionario__nome'] for f in fat_func_qs]
+    fat_func_values = [float(f['total']) for f in fat_func_qs]
+
+    no_show_count = base.filter(no_show=True).count()
+    total_count = base.count()
+    no_show_percent = (no_show_count / total_count * 100) if total_count else 0
+
+    ctx = {
+        'lojas': lojas_qs,
+        'lojas_ids': [int(i) for i in loja_ids],
+        'start': start_date,
+        'end': end_date,
+        'ticket_medio_labels': json.dumps(ticket_labels),
+        'ticket_medio_values': json.dumps(ticket_values),
+        'fat_dia_series': json.dumps(fat_series),
+        'ag_dia_series': json.dumps(ag_series),
+        'dia_labels': json.dumps(dia_labels),
+        'servicos_por_loja': servicos_por_loja,
+        'fat_func_labels': json.dumps(fat_func_labels),
+        'fat_func_values': json.dumps(fat_func_values),
+        'no_show_count': no_show_count,
+        'no_show_percent': no_show_percent,
+    }
+    target = request.headers.get('HX-Target')
+    if request.headers.get('HX-Request') and target != 'content':
+        return render(request, 'accounts/partials/owner_dashboard.html', ctx)
+    return render(request, 'accounts/owner_dashboard.html', ctx)
 
 @login_required
 @subscription_required

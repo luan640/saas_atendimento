@@ -55,6 +55,20 @@
                 <span class="hide-menu">Dashboard</span>
               </a>
             </li>
+            <li class="sidebar-item">
+              <a
+                aria-expanded="false"
+                class="sidebar-link"
+                href="{% url 'accounts:owner_dashboard' %}"
+                hx-get="{% url 'accounts:owner_dashboard' %}"
+                hx-target="#content"
+                hx-select="#content"
+                hx-swap="outerHTML"
+                hx-push-url="true">
+                <i class="ti ti-chart-bar"></i>
+                <span class="hide-menu">Relatórios</span>
+              </a>
+            </li>
             <!-- ---------------------------------- -->
             <!-- Sobre -->
             <!-- ---------------------------------- -->
