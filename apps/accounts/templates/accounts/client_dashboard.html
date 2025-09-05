@@ -1,17 +1,36 @@
 {% extends "accounts/base_client.html" %}
 {% block title %}Área do Cliente{% endblock %}
 
+{% block extra_head %}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    .card-elev { border:0; border-radius:1rem; box-shadow:0 10px 30px rgba(0,0,0,.08); }
+  </style>
+{% endblock %}
+
 {% block content %}
-<h3 class="mb-3">Olá, {{ request.user.full_name|default:"Cliente" }}</h3>
-<p>Você está autenticado como cliente ({{ request.user.phone }}).</p>
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h3 class="mb-0">Olá, {{ request.user.full_name|default:"Cliente" }}</h3>
+      <small class="text-muted">Autenticado como {{ request.user.phone }}</small>
+    </div>
+    {# ajuste a URL de agendamento conforme sua rota #}
+    <a href="{% url 'appointments:agendamento_start' %}" class="btn btn-primary">
+      <i class="bi bi-calendar-plus me-1"></i> Agendar agora
+    </a>
+  </div>
 
-{% if loja %}
-  <hr>
-  <p>Loja selecionada: <strong>{{ loja.nome }}</strong></p>
-  {% if loja.endereco %}<p class="text-muted">Endereço: {{ loja.endereco }}</p>{% endif %}
-{% endif %}
+  {% if loja %}
+    <div class="alert alert-light border d-flex align-items-center gap-2">
+      <i class="bi bi-shop-window fs-5 text-primary"></i>
+      <div>
+        <div class="fw-semibold">Loja selecionada: {{ loja.nome }}</div>
+        {% if loja.endereco %}<div class="text-muted small">Endereço: {{ loja.endereco }}</div>{% endif %}
+      </div>
+    </div>
+  {% endif %}
 
-<div id="client-dashboard-fragment">
-  {% include "accounts/partials/client_dashboard.html" %}
-</div>
+  <div id="client-dashboard-fragment">
+    {% include "accounts/partials/client_dashboard.html" %}
+  </div>
 {% endblock %}

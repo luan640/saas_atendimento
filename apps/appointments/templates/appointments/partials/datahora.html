@@ -1,33 +1,170 @@
-<h3>Data e horário</h3>
-<p>{{ funcionario.nome }} –
-{% for s in servicos %}{{ s.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+{# appointments/partials/datahora.html #}
+<div id="step-datahora" hx-indicator=".htmx-indicator" aria-live="polite">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <div>
+      <h3 class="mb-1">Data e horário</h3>
+      <small class="text-muted">
+        {{ funcionario.nome }} —
+        {% for s in servicos %}{{ s.nome }}{% if not forloop.last %}, {% endif %}{% endfor %}
+      </small>
+    </div>
+    <span class="badge rounded-pill bg-light text-dark">Passo 3 de 3</span>
+  </div>
 
-<form method="get" hx-get="{% url 'appointments:agendamento_datahora' %}"
-      hx-target="#step-container" hx-trigger="change" class="mb-3">
-  <div class="mb-3">
-    {{ form.data.label_tag }} {{ form.data }}
-  </div>
-</form>
+  {# ===== Escolha da data ===== #}
+  <form method="get"
+        hx-get="{% url 'appointments:agendamento_datahora' %}"
+        hx-target="#step-container"
+        hx-trigger="change"
+        class="mb-3"
+        id="dateForm">
+    <label class="form-label mb-1">{{ form.data.label }}</label>
+    <div class="input-group">
+      <button class="btn btn-outline-secondary" type="button" id="btnPrevDay" aria-label="Dia anterior">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      {# O próprio campo de data do Form #}
+      {{ form.data }}
+      <button class="btn btn-outline-secondary" type="button" id="btnNextDay" aria-label="Próximo dia">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+    {% if form.data.errors %}
+      {% for e in form.data.errors %}
+        <div class="invalid-feedback d-block">{{ e }}</div>
+      {% endfor %}
+    {% endif %}
+    <div class="form-text">Selecione a data. Os horários abaixo se atualizam automaticamente.</div>
+  </form>
 
-{% if form.hora.field.choices %}
-<form method="post" hx-post="{% url 'appointments:agendamento_datahora' %}" hx-target="#step-container">
-  {% csrf_token %}
-  <input type="hidden" name="data" value="{{ dia|date:'Y-m-d' }}">
-  <div class="mb-3">
-    {{ form.hora.label_tag }} {{ form.hora }}
-  </div>
-  <div class="d-flex justify-content-between">
-    <button type="button" class="btn btn-secondary"
-            hx-get="{% url 'appointments:agendamento_servicos' funcionario.id %}"
-            hx-target="#step-container" hx-push-url="true">Voltar</button>
-    <button type="submit" class="btn btn-primary">Confirmar</button>
-  </div>
-</form>
-{% else %}
-<p>Nenhum horário disponível para esta data.</p>
-<div class="d-flex justify-content-start">
-  <button type="button" class="btn btn-secondary"
-          hx-get="{% url 'appointments:agendamento_servicos' funcionario.id %}"
-          hx-target="#step-container" hx-push-url="true">Voltar</button>
+  {# ===== Grade de horários ===== #}
+  {% if form.hora.field.choices %}
+    <form method="post"
+          hx-post="{% url 'appointments:agendamento_datahora' %}"
+          hx-target="#step-container"
+          hx-disabled-elt="#btnConfirm, #btnBack, .btn-check"
+          id="timeForm">
+      {% csrf_token %}
+      <input type="hidden" name="data" value="{{ dia|date:'Y-m-d' }}">
+
+      {% if form.hora.errors %}
+        {% for e in form.hora.errors %}
+          <div class="alert alert-danger py-2">{{ e }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="row g-2">
+      {% for val,label in form.hora.field.choices %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <input class="btn-check"
+                type="radio"
+                name="{{ form.hora.name }}"
+                id="slot{{ forloop.counter }}"
+                value="{{ val }}"
+                {% if form.hora.value == val %}checked{% endif %}>
+          <label class="btn btn-outline-primary w-100" for="slot{{ forloop.counter }}">
+            <i class="bi bi-clock me-1"></i>{{ label }}
+          </label>
+        </div>
+      {% endfor %}
+      </div>
+
+      <div class="card mt-3 border-0 shadow-sm">
+        <div class="card-body d-flex flex-wrap align-items-center gap-3">
+          <div class="me-auto">
+            <div class="small text-muted">Confirme o melhor horário para você</div>
+          </div>
+          <button type="button" class="btn btn-secondary"
+                  id="btnBack"
+                  hx-get="{% url 'appointments:agendamento_servicos' funcionario.id %}"
+                  hx-target="#step-container"
+                  hx-push-url="true">
+            Voltar
+          </button>
+          <button type="submit" class="btn btn-primary" id="btnConfirm" disabled>
+            Confirmar
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="htmx-indicator text-center my-3">
+        <div class="spinner-border" role="status" aria-label="Carregando…"></div>
+      </div>
+    </form>
+  {% else %}
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+      <i class="bi bi-info-circle me-2"></i>
+      Nenhum horário disponível para esta data.
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-outline-secondary" id="btnPrevDayEmpty">
+        <i class="bi bi-chevron-left"></i> Dia anterior
+      </button>
+      <button type="button" class="btn btn-outline-primary" id="btnNextDayEmpty">
+        Próximo dia <i class="bi bi-chevron-right"></i>
+      </button>
+      <button type="button" class="btn btn-secondary ms-auto"
+              hx-get="{% url 'appointments:agendamento_servicos' funcionario.id %}"
+              hx-target="#step-container" hx-push-url="true">
+        Voltar
+      </button>
+    </div>
+  {% endif %}
 </div>
-{% endif %}
+
+{# ===== Comportamento (prev/next, habilitar Confirmar, spinner) ===== #}
+<script>
+(function(){
+  // Utilidades de data (YYYY-MM-DD)
+  function toISO(d){ return d.toISOString().slice(0,10); }
+  function parseISO(s){
+    const [y,m,dd] = (s || '').split('-').map(Number);
+    if(!y||!m||!dd) return null;
+    const d = new Date(Date.UTC(y, m-1, dd));
+    // ajustar para data local mantendo dia
+    return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  function addDays(iso, n){
+    const d = parseISO(iso) || new Date();
+    d.setDate(d.getDate() + n);
+    return toISO(d);
+  }
+
+  // Navegação de data (form GET)
+  const dateForm = document.getElementById('dateForm');
+  const dateInput = dateForm ? dateForm.querySelector('input[type="date"], input[name="{{ form.data.name }}"]') : null;
+  function setDateAndSubmit(newISO){
+    if(!dateInput) return;
+    dateInput.value = newISO;
+    // dispara change → HTMX GET recarrega a parcial
+    const evt = new Event('change', { bubbles: true });
+    dateInput.dispatchEvent(evt);
+  }
+
+  const prevBtn = document.getElementById('btnPrevDay');
+  const nextBtn = document.getElementById('btnNextDay');
+  prevBtn && prevBtn.addEventListener('click', () => setDateAndSubmit(addDays(dateInput?.value, -1)));
+  nextBtn && nextBtn.addEventListener('click', () => setDateAndSubmit(addDays(dateInput?.value, 1)));
+
+  // Botões prev/next do estado vazio
+  const prevEmpty = document.getElementById('btnPrevDayEmpty');
+  const nextEmpty = document.getElementById('btnNextDayEmpty');
+  prevEmpty && prevEmpty.addEventListener('click', () => setDateAndSubmit(addDays(dateInput?.value, -1)));
+  nextEmpty && nextEmpty.addEventListener('click', () => setDateAndSubmit(addDays(dateInput?.value, 1)));
+
+  // Habilitar "Confirmar" quando um horário for escolhido
+  const timeForm = document.getElementById('timeForm');
+  const confirmBtn = document.getElementById('btnConfirm');
+  if(timeForm && confirmBtn){
+    timeForm.addEventListener('change', (e) => {
+      if(e.target && e.target.name === "{{ form.hora.name }}"){
+        confirmBtn.disabled = false;
+      }
+    });
+    timeForm.addEventListener('submit', () => {
+      confirmBtn.querySelector('.spinner-border')?.classList.remove('d-none');
+    });
+  }
+})();
+</script>

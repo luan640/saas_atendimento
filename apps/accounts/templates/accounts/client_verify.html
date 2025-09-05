@@ -1,14 +1,184 @@
 {% extends 'accounts/base_client.html' %}
 {% block title %}Verificação de Código{% endblock %}
+
+{% block extra_head %}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    .card-elev { border:0; border-radius:1rem; box-shadow:0 10px 30px rgba(0,0,0,.08); }
+    .step-badge { font-size:.8rem; background:#eef2ff; color:#3730a3; }
+    .otp-input {
+      width: 3rem; height: 3.2rem; text-align: center; font-size: 1.4rem;
+      border: 1px solid #ced4da; border-radius: .5rem;
+    }
+    .otp-input:focus { outline: none; border-color: #0d6efd; box-shadow: 0 0 0 .25rem rgba(13,110,253,.25); }
+    .otp-group { gap: .5rem; }
+    @media (min-width: 768px) { .otp-input { width: 3.2rem; height: 3.4rem; font-size: 1.6rem; } }
+  </style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
-    <h3 class="mb-3">Verifique seu telefone</h3>
-    <form method="post">{% csrf_token %}
-      {{ form.as_p }}
-      {% if phone %}<p class="text-muted">Telefone: <strong>{{ phone }}</strong></p>{% endif %}
-      <button class="btn btn-success w-100" type="submit">Entrar</button>
-    </form>
+  <div class="col-lg-5 col-md-7">
+    <div class="card card-elev">
+      <div class="card-body p-4 p-md-5">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h3 class="m-0">Verifique seu telefone</h3>
+          <span class="badge step-badge">Passo 2 de 2</span>
+        </div>
+        <p class="text-muted mb-4">
+          Enviamos um código de 6 dígitos para{% if phone %} <strong>{{ phone }}</strong>{% endif %}.
+          Digite abaixo para entrar.
+        </p>
+
+        {# non-field errors (ex.: código inválido/expirado) #}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2" role="alert">
+            {% for e in form.non_field_errors %}
+              <div>{{ e }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" id="verifyForm" novalidate>
+          {% csrf_token %}
+
+          {# Campo oculto real do Django form: assumindo form.code existe #}
+          {% with field=form.code %}
+            <input type="hidden" name="{{ field.html_name }}" id="code-hidden" value="{{ field.value|default_if_none:'' }}">
+          {% endwith %}
+
+          {# Campo hidden real do form para phone #}
+          {% with field=form.phone %}
+            <input type="hidden"
+                  name="{{ field.html_name }}"
+                  id="{{ field.id_for_label }}"
+                  value="{{ phone|default_if_none:'' }}">
+          {% endwith %}
+
+          <div class="mb-3">
+            <label class="form-label">Código de verificação</label>
+            <div class="d-flex otp-group">
+              {% for i in "123456" %}
+                <input type="text" class="otp-input form-control{% if form.code.errors %} is-invalid{% endif %}"
+                       inputmode="numeric" pattern="[0-9]*" maxlength="1" aria-label="Dígito {{ forloop.counter }}">
+              {% endfor %}
+            </div>
+            {% if form.code.help_text %}<div class="form-text">{{ form.code.help_text }}</div>{% endif %}
+            {% for e in form.code.errors %}
+              <div class="invalid-feedback d-block">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <button class="btn btn-success w-100" type="submit" id="submitBtn" disabled>
+            <span class="btn-label-text">Entrar</span>
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+          </button>
+
+          <div class="d-flex justify-content-between align-items-center mt-3 small">
+            <a class="text-decoration-none" href="{% url 'accounts:client_start_loja' slug %}">
+              <i class="bi bi-arrow-left"></i> Trocar telefone
+            </a>
+            <div>
+              <span id="resendTimer">Reenviar em <strong>60</strong>s</span>
+              <button type="button"
+                      id="resendBtn"
+                      class="btn btn-link p-0 ms-2 align-baseline"
+                      hx-post="{% url 'accounts:client_resend_code' slug=slug %}"
+                      hx-vals='{"phone":"{{ phone|default_if_none:"" }}"}'
+                      hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'
+                      hx-swap="none"
+                      hx-disabled-elt="#resendBtn">
+                Reenviar código
+              </button>
+            </div>
+          </div>
+
+          <div class="text-muted small mt-2">
+            Dica: você pode colar o código completo; a gente separa nos quadrinhos.
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const form = document.getElementById('verifyForm');
+  const hidden = document.getElementById('code-hidden');
+  const inputs = Array.from(document.querySelectorAll('.otp-input'));
+  const btn = document.getElementById('submitBtn');
+
+  // Avança automaticamente e só aceita dígitos
+  inputs.forEach((inp, idx) => {
+    inp.addEventListener('input', (e) => {
+      const val = e.target.value.replace(/\D/g, '').slice(0,1);
+      e.target.value = val;
+      if (val && idx < inputs.length - 1) inputs[idx + 1].focus();
+      syncHidden();
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+        inputs[idx - 1].focus();
+      }
+    });
+    // Facilita colar o código inteiro em qualquer campo
+    inp.addEventListener('paste', (e) => {
+      e.preventDefault();
+      let text = (e.clipboardData || window.clipboardData).getData('text');
+      text = text.replace(/[^\d]/g, '').slice(0, inputs.length);
+      inputs.forEach((i, j) => i.value = text[j] || '');
+      (inputs[Math.min(text.length, inputs.length) - 1] || inputs[0]).focus();
+      syncHidden();
+    });
+  });
+
+  function syncHidden() {
+    const code = inputs.map(i => i.value || '').join('');
+    hidden.value = code;
+    btn.disabled = (code.length !== inputs.length);
+  }
+
+  form.addEventListener('submit', function () {
+    btn.disabled = true;
+    btn.querySelector('.btn-label-text').textContent = 'Verificando...';
+    btn.querySelector('.spinner-border').classList.remove('d-none');
+  });
+
+  // ----- Reenviar com contagem regressiva -----
+  const RESEND_SECONDS = 60;
+  const resendBtn = document.getElementById('resendBtn');
+  const resendTimer = document.getElementById('resendTimer');
+  let remaining = RESEND_SECONDS;
+  const tick = () => {
+    remaining -= 1;
+    if (remaining <= 0) {
+      resendBtn.disabled = false;
+      resendTimer.textContent = 'Pode reenviar agora';
+      clearInterval(timer);
+    } else {
+      const strong = resendTimer.querySelector('strong') || document.createElement('strong');
+      strong.textContent = remaining;
+      if (!resendTimer.querySelector('strong')) { resendTimer.textContent = 'Reenviar em '; resendTimer.appendChild(strong); resendTimer.append('s'); }
+    }
+  };
+  const timer = setInterval(tick, 1000);
+  tick();
+
+  // Feedback simples após reenviar (se usar HX-Trigger no servidor, dá pra invocar seu showToast)
+  document.body.addEventListener('htmx:afterRequest', (e) => {
+    if (e.target === resendBtn) {
+      // Reinicia contador
+      remaining = RESEND_SECONDS + 1;
+      resendBtn.disabled = true;
+      tick();
+      // feedback visual leve
+      resendBtn.textContent = 'Enviado!';
+      setTimeout(() => { resendBtn.textContent = 'Reenviar código'; }, 1500);
+    }
+  });
+})();
+</script>
 {% endblock %}

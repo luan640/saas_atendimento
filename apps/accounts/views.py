@@ -1,6 +1,3 @@
-import random
-import json
-from datetime import date, timedelta, time
 from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -9,6 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.http import HttpResponse
 from django.db.models import Q, Sum, Count, Avg
+from django.views.decorators.http import require_POST
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
@@ -17,6 +15,23 @@ from apps.cadastro.models import Loja, Cliente, Funcionario, Servico
 from apps.accounts.decorators import subscription_required
 from apps.appointments.models import Agendamento
 from apps.appointments.utils import gerar_slots_disponiveis
+
+import random
+import json
+from datetime import date, timedelta, time
+
+# ========== HELPERS ==========
+
+def _issue_otp(phone: str) -> str:
+    code = f"{random.randint(0, 999999):06d}"
+    ClientOTP.objects.create(
+        phone=phone,
+        code=code,
+        created_at=timezone.now(),
+        expires_at=timezone.now() + timedelta(minutes=5),
+    )
+    print(f"[DEBUG OTP] Enviar {code} para {phone}", flush=True)
+    return code
 
 # ========== OWNER ==========
 
@@ -382,21 +397,13 @@ def client_start_loja(request, slug):
             # contexto para o verify
             request.session['pending_full_name'] = full_name
             request.session['shop_slug'] = loja.slug
+            request.session['pending_phone'] = phone
 
-            # GERA OTP AQUI
-            code = f"{random.randint(0, 999999):06d}"
-            ClientOTP.objects.create(
-                phone=phone,
-                code=code,
-                created_at=timezone.now(),
-                expires_at=timezone.now() + timedelta(minutes=5),
-            )
-
-            print(f"[DEBUG OTP] Enviar {code} para {phone}", flush=True)
+            _issue_otp(phone)
 
             messages.success(request, "Código de verificação enviado (ver console do servidor).")
             url = reverse('accounts:client_verify')
-            return redirect(f"{url}?phone={phone}&shop={loja.slug}")
+            return redirect(f"{url}?phone={phone}&shop={loja.slug}&name={full_name}")
     else:
         form = ClientStartForm()
 
@@ -410,13 +417,15 @@ def client_verify(request):
         or request.POST.get('shop')
         or request.session.get('shop_slug')
     )
+    full_name = request.GET.get('name')
 
     if request.method == 'POST':
         form = ClientVerifyForm(request.POST)
-        if form.is_valid():
-            phone = form.cleaned_data['phone']
-            code  = form.cleaned_data['code']
 
+        if form.is_valid():
+            phone = request.session.get('pending_phone')
+            code  = form.cleaned_data['code']
+            
             # guarda a loja na sessão (se veio por GET/POST)
             if shop_slug:
                 request.session['shop_slug'] = shop_slug
@@ -447,7 +456,7 @@ def client_verify(request):
 
                 owner = get_object_or_404(Loja, slug=shop_slug)
 
-                Cliente.objects.create(owner=owner.owner, user=user)
+                Cliente.objects.get_or_create(owner=owner.owner, user=user)
 
                 if not user.is_client:
                     user.is_client = True
@@ -458,12 +467,16 @@ def client_verify(request):
 
                 login(request, user)
                 return redirect('accounts:client_dashboard')
+        else:
+            print(form.errors)
     else:
         form = ClientVerifyForm(initial={'phone': phone})
 
     return render(request, 'accounts/client_verify.html', {
         'form': form,
         'phone': phone,
+        'client_start': full_name,
+        'slug': shop_slug,
     })
 
 @login_required
@@ -490,3 +503,36 @@ def client_dashboard(request):
         }
     )
 
+@require_POST
+def client_resend_code(request, slug):
+    """
+    Reemite o OTP via HTMX (POST).
+    Espera: phone (POST) ou session['pending_phone'].
+    Retorna 204 + HX-Trigger (toast).
+    """
+    loja = get_object_or_404(Loja, slug=slug, ativa=True)
+
+    phone = request.POST.get('phone') or request.session.get('pending_phone')
+    if not phone:
+        resp = HttpResponse(status=400)
+        resp['HX-Trigger'] = json.dumps({
+            "show-toast": {"text": "Telefone ausente para reenviar código.", "level": "error"}
+        })
+        return resp
+
+    # Throttle simples: evita spam de reenvio < 60s
+    last = ClientOTP.objects.filter(phone=phone).order_by('-created_at').first()
+    if last and (timezone.now() - last.created_at).total_seconds() < 60:
+        resp = HttpResponse(status=429)
+        resp['HX-Trigger'] = json.dumps({
+            "show-toast": {"text": "Aguarde alguns segundos antes de reenviar.", "level": "error"}
+        })
+        return resp
+
+    _issue_otp(phone)
+
+    resp = HttpResponse(status=204)  # sem swap no HTMX
+    resp['HX-Trigger'] = json.dumps({
+        "show-toast": {"text": "Código reenviado!", "level": "success"}
+    })
+    return resp

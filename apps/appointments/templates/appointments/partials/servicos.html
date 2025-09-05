@@ -1,29 +1,162 @@
-<h3>Profissional: {{ funcionario.nome }}</h3>
-
-{% if erro %}
-  <div class="alert alert-danger">{{ erro }}</div>
-{% endif %}
-
-<p class="text-muted">Escolha os serviços</p>
-<form hx-post="{% url 'appointments:agendamento_servicos' funcionario.id %}"
-      hx-target="#step-container">
-  {% csrf_token %}
-  <ul class="list-group mb-3">
-    {% for s in servicos %}
-    <li class="list-group-item">
-      <label>
-        <input type="checkbox" name="servicos" value="{{ s.id }}" {% if s.id in selecionados %}checked{% endif %}>
-        {{ s.nome }} – <span class="text-muted">R$ {{ s.preco }} / {{ s.duracao_minutos }} min</span>
-      </label>
-    </li>
-    {% empty %}
-    <li class="list-group-item text-muted">Nenhum serviço disponível</li>
-    {% endfor %}
-  </ul>
-  <div class="d-flex justify-content-between">
-    <button type="button" class="btn btn-secondary"
-            hx-get="{% url 'appointments:agendamento_profissionais' %}"
-            hx-target="#step-container" hx-push-url="true">Voltar</button>
-    <button type="submit" class="btn btn-primary">Próximo</button>
+{# appointments/partials/servicos.html #}
+<div id="step-servicos" hx-indicator=".htmx-indicator" aria-live="polite">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <div>
+      <h3 class="mb-1">Serviços</h3>
+      <small class="text-muted">Profissional: {{ funcionario.nome }}</small>
+    </div>
+    <span class="badge rounded-pill bg-light text-dark">Passo 2 de 3</span>
   </div>
-</form>
+
+  {% if erro %}
+    <div class="alert alert-danger py-2">{{ erro }}</div>
+  {% endif %}
+
+  {# Busca local #}
+  <div class="input-group mb-3">
+    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+    <input type="search" class="form-control" id="filterServices" placeholder="Filtrar serviços…">
+    <button class="btn btn-outline-secondary" type="button" id="toggleAllBtn">Selecionar todos</button>
+  </div>
+
+  <form
+      hx-post="{% url 'appointments:agendamento_servicos' funcionario.id %}"
+      hx-target="#step-container"
+      hx-disabled-elt="#btnNext, #btnBack, input[name='servicos']">
+
+    {% csrf_token %}
+
+    {% if servicos %}
+      <div class="row g-3">
+        {% for s in servicos %}
+          {# valores em data-* para somatório JS #}
+          <div class="col-12 col-md-6 service-item"
+               data-name="{{ s.nome|lower }}"
+               data-role=""
+               data-preco="{{ s.preco|floatformat:'2' }}"
+               data-min="{{ s.duracao_minutos|default:0 }}">
+            <div class="card h-100 shadow-sm border-0">
+              <label class="card-body d-flex gap-3 align-items-start m-0" for="svc{{ s.id }}" style="cursor:pointer;">
+                <input class="form-check-input mt-1 service-check"
+                       type="checkbox"
+                       id="svc{{ s.id }}"
+                       name="servicos"
+                       value="{{ s.id }}"
+                       {% if s.id in selecionados %}checked{% endif %}>
+                <div class="flex-grow-1">
+                  <div class="fw-semibold">{{ s.nome }}</div>
+                  <div class="text-muted small">
+                    R$ {{ s.preco }} • {{ s.duracao_minutos }} min
+                  </div>
+                  {% if s.descricao %}
+                    <div class="small mt-1 text-muted">{{ s.descricao }}</div>
+                  {% endif %}
+                </div>
+              </label>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-4 text-muted">
+        Nenhum serviço disponível para este profissional.
+      </div>
+    {% endif %}
+
+    {# Resumo + ações #}
+    <div class="card mt-3 border-0 shadow-sm">
+      <div class="card-body d-flex flex-wrap align-items-center gap-3">
+        <div class="me-auto">
+          <div class="small text-muted">Resumo da seleção</div>
+          <div class="fw-semibold">
+            <span id="sumCount">0</span> selecionado(s) ·
+            <span id="sumTime">0</span> min ·
+            <span id="sumPrice">R$ 0,00</span>
+          </div>
+        </div>
+        <button type="button" class="btn btn-secondary"
+                id="btnBack"
+                hx-get="{% url 'appointments:agendamento_profissionais' %}"
+                hx-target="#step-container"
+                hx-push-url="true">
+          Voltar
+        </button>
+        <button type="submit" class="btn btn-primary" id="btnNext" disabled>
+          Próximo
+          <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="htmx-indicator text-center my-3">
+      <div class="spinner-border" role="status" aria-label="Carregando…"></div>
+    </div>
+  </form>
+</div>
+
+{# Comportamento client-side: filtro, selecionar todos, somatórios e estado do botão #}
+<script>
+(function(){
+  const nf = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const items = Array.from(document.querySelectorAll('#step-servicos .service-item'));
+  const checks = Array.from(document.querySelectorAll('#step-servicos .service-check'));
+  const filter = document.getElementById('filterServices');
+  const btnNext = document.getElementById('btnNext');
+  const btnBack = document.getElementById('btnBack');
+  const toggleAllBtn = document.getElementById('toggleAllBtn');
+
+  const sumCountEl = document.getElementById('sumCount');
+  const sumTimeEl  = document.getElementById('sumTime');
+  const sumPriceEl = document.getElementById('sumPrice');
+
+  function recalc(){
+    const sel = checks.filter(c => c.checked);
+    let mins = 0, price = 0;
+    sel.forEach(c => {
+      const box = c.closest('.service-item');
+      const m = parseInt(box?.dataset.min || '0', 10);
+      const p = parseFloat((box?.dataset.preco || '0').replace(',', '.'));
+      mins += isNaN(m) ? 0 : m;
+      price += isNaN(p) ? 0 : p;
+    });
+    sumCountEl.textContent = sel.length;
+    sumTimeEl.textContent  = mins;
+    sumPriceEl.textContent = nf.format(price);
+    btnNext.disabled = sel.length === 0;
+  }
+
+  function applyFilter(){
+    const q = (filter?.value || '').trim().toLowerCase();
+    items.forEach(card => {
+      const name = card.dataset.name || '';
+      card.style.display = name.includes(q) ? '' : 'none';
+    });
+  }
+
+  function toggleAll(){
+    const visibleChecks = items
+      .filter(card => card.style.display !== 'none')
+      .map(card => card.querySelector('.service-check'));
+    const allVisibleSelected = visibleChecks.length > 0 && visibleChecks.every(c => c.checked);
+    visibleChecks.forEach(c => c.checked = !allVisibleSelected);
+    toggleAllBtn.textContent = allVisibleSelected ? 'Selecionar todos' : 'Limpar seleção';
+    recalc();
+  }
+
+  // Eventos
+  checks.forEach(c => c.addEventListener('change', recalc));
+  filter?.addEventListener('input', () => { applyFilter(); });
+  toggleAllBtn?.addEventListener('click', toggleAll);
+
+  // Estado inicial
+  applyFilter();
+  recalc();
+
+  // UX no submit: spinner no botão Próximo
+  const form = document.querySelector('#step-servicos form');
+  form?.addEventListener('submit', () => {
+    btnNext.querySelector('.spinner-border')?.classList.remove('d-none');
+  });
+})();
+</script>

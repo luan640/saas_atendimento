@@ -1,13 +1,126 @@
 {% extends 'accounts/base_client.html' %}
 {% block title %}Agendar – Identificação{% endblock %}
+
+{% block extra_head %}
+  {# Ícones do Bootstrap #}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <style>
+    .card-elev {
+      border: 0;
+      border-radius: 1rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    }
+    .step-badge {
+      font-size: .8rem;
+      background: #eef2ff;
+      color: #3730a3;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
-    <h3 class="mb-3">Identifique-se para agendar</h3>
-    <form method="post">{% csrf_token %}
-      {{ form.as_p }}
-      <button class="btn btn-primary w-100" type="submit">Continuar</button>
-    </form>
+  <div class="col-lg-5 col-md-7">
+    <div class="card card-elev">
+      <div class="card-body p-4 p-md-5">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h3 class="m-0">Identifique-se</h3>
+          <span class="badge step-badge">Passo 1 de 2</span>
+        </div>
+        <p class="text-muted mb-4">Informe seu nome e telefone para continuar o agendamento.</p>
+
+        {# Erros não associados a campos (ex.: ValidationError no clean) #}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2" role="alert">
+            {% for e in form.non_field_errors %}
+              <div>{{ e }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {# --- Campo: Nome --- #}
+          {% with field=form.full_name %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-person"></i></span>
+              <input
+                type="text"
+                name="{{ field.html_name }}"
+                id="{{ field.id_for_label }}"
+                class="form-control{% if field.errors %} is-invalid{% endif %}"
+                value="{{ field.value|default_if_none:'' }}"
+                maxlength="120"
+                autocomplete="name"
+                placeholder="Seu nome completo">
+            </div>
+            {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+            {% for e in field.errors %}
+              <div class="invalid-feedback d-block">{{ e }}</div>
+            {% endfor %}
+          </div>
+          {% endwith %}
+
+          {# --- Campo: Telefone --- #}
+          {% with field=form.phone %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+              <input
+                type="tel"
+                name="{{ field.html_name }}"
+                id="{{ field.id_for_label }}"
+                class="form-control{% if field.errors %} is-invalid{% endif %}"
+                value="{{ field.value|default_if_none:'' }}"
+                inputmode="tel"
+                pattern="^\+?\d{10,15}$"
+                placeholder="+5585XXXXXXXX">
+            </div>
+            {% for e in field.errors %}
+              <div class="invalid-feedback d-block">{{ e }}</div>
+            {% endfor %}
+          </div>
+          {% endwith %}
+
+          <button class="btn btn-primary w-100" type="submit" id="submitBtn">
+            <span class="btn-label-text">Continuar</span>
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+          </button>
+
+          <div class="text-muted small mt-3">
+            Seus dados são usados apenas para identificar e vincular seu agendamento.
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="text-center mt-3">
+      <a class="text-decoration-none small" href="/" hx-boost="true">
+        <i class="bi bi-arrow-left"></i> Voltar
+      </a>
+    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Desabilita botão no submit e mostra loading
+  (function () {
+    const form = document.querySelector('form');
+    const btn = document.getElementById('submitBtn');
+    if (!form || !btn) return;
+
+    form.addEventListener('submit', function () {
+      btn.disabled = true;
+      btn.querySelector('.btn-label-text').textContent = 'Enviando...';
+      btn.querySelector('.spinner-border').classList.remove('d-none');
+    });
+    
+  })();
+</script>
 {% endblock %}

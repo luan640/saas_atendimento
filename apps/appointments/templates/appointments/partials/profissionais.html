@@ -1,16 +1,86 @@
-<h3>Escolha o profissional</h3>
-<ul class="list-group">
-  {% for f in funcionarios %}
-  <li class="list-group-item d-flex justify-content-between align-items-center">
-    {{ f.nome }} <span class="text-muted">{{ f.get_cargo_display }}</span>
-    <button class="btn btn-sm btn-primary"
-            hx-get="{% url 'appointments:agendamento_servicos' f.id %}"
-            hx-target="#step-container"
-            hx-push-url="true">
-      Selecionar
-    </button>
-  </li>
-  {% empty %}
-  <li class="list-group-item text-muted">Nenhum funcionário disponível</li>
-  {% endfor %}
-</ul>
+{# appointments/partials/profissionais.html #}
+<div id="step-profissionais" hx-indicator=".htmx-indicator" aria-live="polite">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h3 class="mb-1">Escolha o profissional</h3>
+      {% if loja %}
+        <small class="text-muted">Loja: {{ loja.nome }}</small>
+      {% endif %}
+    </div>
+    <span class="badge rounded-pill bg-light text-dark">Passo 1 de 3</span>
+  </div>
+
+  {# Busca local (client-side) por nome/cargo #}
+  <div class="input-group mb-3">
+    <span class="input-group-text">
+      <i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">Buscar</span>
+    </span>
+    <input type="search" class="form-control" id="filterInput" placeholder="Filtrar por nome ou cargo…">
+  </div>
+
+  <div class="row g-3">
+    {% for f in funcionarios %}
+      <div class="col-12 col-md-6 col-lg-4 professional-item">
+        <div class="card h-100 shadow-sm border-0">
+          <div class="card-body d-flex align-items-center">
+            <div class="me-3">
+              {% if f.foto %}
+                <img src="{{ f.foto.url }}" alt="{{ f.nome }}" class="rounded-circle" width="48" height="48">
+              {% else %}
+                <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center"
+                     style="width:48px;height:48px;">
+                  <span class="fw-bold">{{ f.nome|first|upper }}</span>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="flex-grow-1">
+              <div class="fw-semibold prof-name">{{ f.nome }}</div>
+              <div class="text-muted small prof-role">{{ f.get_cargo_display }}</div>
+              {# se quiser, dá pra exibir especialidades/descrição aqui #}
+            </div>
+
+            <div class="ms-2">
+              <button class="btn btn-sm btn-primary"
+                      hx-get="{% url 'appointments:agendamento_servicos' f.id %}"
+                      hx-target="#step-container"
+                      hx-push-url="true"
+                      hx-disabled-elt="this">
+                Selecionar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="col-12">
+        <div class="text-center py-4 text-muted">
+          Nenhum funcionário disponível.
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {# Indicador de loading para requisições HTMX dentro deste bloco #}
+  <div class="htmx-indicator text-center my-4">
+    <div class="spinner-border" role="status" aria-label="Carregando…"></div>
+  </div>
+</div>
+
+{# Busca local (sem depender do backend) #}
+<script>
+  (function(){
+    const input = document.getElementById('filterInput');
+    if(!input) return;
+    const items = document.querySelectorAll('#step-profissionais .professional-item');
+
+    input.addEventListener('input', function(){
+      const q = this.value.trim().toLowerCase();
+      items.forEach(card => {
+        const name = card.querySelector('.prof-name')?.textContent.toLowerCase() || '';
+        const role = card.querySelector('.prof-role')?.textContent.toLowerCase() || '';
+        card.style.display = (name.includes(q) || role.includes(q)) ? '' : 'none';
+      });
+    });
+  })();
+</script>
