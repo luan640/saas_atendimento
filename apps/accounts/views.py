@@ -36,13 +36,11 @@ def _issue_otp(phone: str) -> str:
 
 # ========== OWNER ==========
 
-
 def home_redirect(request):
     """Serve client start on shop subdomains; owners go to login."""
     if get_shop_slug_from_host(request):
         return client_start_loja(request)
     return redirect('accounts:owner_login')
-
 
 def owner_login(request):
     form = OwnerLoginForm(request.POST or None)

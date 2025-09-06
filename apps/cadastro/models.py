@@ -39,14 +39,44 @@ class Loja(models.Model):
         return reverse('accounts:home')
 
     def get_public_url(self, request=None):
+        """
+        Monta algo como:
+        - DEV:
+          http://<slug>.client.localhost:8000<path>
+        - PROD (se acessar de lojaX.client.seudominio.com):
+          https://<slug>.client.seudominio.com<path>
+        """
         path = self.get_public_path()
-        if request:
-            host = request.get_host().split(':')[0]
-            domain_parts = host.split('.')
-            base_domain = '.'.join(domain_parts[-2:]) if len(domain_parts) >= 2 else host
-            scheme = 'https' if request.is_secure() else 'http'
-            return f"{scheme}://{self.slug}.client.{base_domain}{path}"
-        return path
+        if not request:
+            return path
+
+        host_full = request.get_host()  # pode vir com porta
+        if ":" in host_full:
+            domain, port = host_full.split(":", 1)
+            port = f":{port}"
+        else:
+            domain, port = host_full, ""
+
+        labels = domain.split(".")
+        scheme = "https" if request.is_secure() else "http"
+
+        # 1) Se já estamos em algo como lojaX.client.localhost ou client.localhost
+        try:
+            idx = labels.index("client")
+            # pega "client.localhost" ou "client.seudominio.com"
+            rest = ".".join(labels[idx:])
+        except ValueError:
+            # 2) Fallbacks:
+            # - se é localhost OU um IPv4 (ex.: 127.0.0.1), use client.localhost
+            is_ipv4 = (len(labels) == 4 and all(p.isdigit() for p in labels))
+            if labels[-1] == "localhost" or is_ipv4:
+                rest = "client.localhost"
+            else:
+                # produção sem 'client' no host atual -> injeta client.<base_domain>
+                base_domain = ".".join(labels[-2:]) if len(labels) >= 2 else domain
+                rest = f"client.{base_domain}"
+
+        return f"{scheme}://{self.slug}.{rest}{port}{path}"
 
     def __str__(self):
         return f"{self.nome} ({self.owner.email})"

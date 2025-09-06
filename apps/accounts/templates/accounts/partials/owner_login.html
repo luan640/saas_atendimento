@@ -1,32 +1,107 @@
+{# accounts/partials/owner_login.html #}
 <div class="row justify-content-center">
-  <div class="col-md-5">
-    {% if form.non_field_errors %}
-      <div class="alert alert-danger">
-        {{ form.non_field_errors }}
+  <div class="col-md-6 col-lg-5">
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4 p-md-5">
+
+        <h3 class="mb-3">Entrar (Dono)</h3>
+
+        {# Erros gerais (ex.: credenciais inválidas) #}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2" role="alert">
+            {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
+          </div>
+        {% endif %}
+
+        <form
+          method="post"
+          hx-post="{% url 'accounts:owner_login' %}"
+          hx-target="#owner-login"
+          hx-swap="innerHTML"
+          hx-indicator="#login-loading"
+          hx-disabled-elt="input, button, select"
+          id="ownerLoginForm"
+          novalidate
+        >
+          {% csrf_token %}
+
+          {# Renderização “bonita” quando os campos padrão existem #}
+          {% if form.username and form.password %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.username.id_for_label }}">{{ form.username.label|default:"Usuário" }}</label>
+              {{ form.username }}
+              {% for e in form.username.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              {% if form.username.help_text %}<div class="form-text">{{ form.username.help_text }}</div>{% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.password.id_for_label }}">{{ form.password.label|default:"Senha" }}</label>
+              <div class="input-group">
+                {{ form.password }}
+                <button class="btn btn-outline-secondary" type="button" id="togglePwd" aria-label="Mostrar/ocultar senha">Mostrar</button>
+              </div>
+              {% for e in form.password.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+            </div>
+          {% else %}
+            {# Fallback para forms customizados #}
+            {{ form.as_p }}
+          {% endif %}
+
+          {# Preserva o parâmetro next no POST #}
+          {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+          {% endif %}
+
+          <button class="btn btn-primary w-100" type="submit" id="loginBtn">
+            <span class="btn-label-text">Entrar</span>
+            <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+          </button>
+
+          <div class="d-flex justify-content-between mt-3 small">
+            <div></div>
+            {# Ajuste a URL se tiver recuperação de senha #}
+            <a class="text-decoration-none" href="">Esqueci minha senha</a>
+          </div>
+        </form>
+
+        <hr class="my-4">
+        <p class="text-muted small m-0">
+          O primeiro login cria automaticamente o período <strong>Free (7 dias)</strong>.
+        </p>
       </div>
-    {% endif %}
+    </div>
 
-    <form
-      method="post"
-      hx-post="{% url 'accounts:owner_login' %}"
-      hx-target="#owner-login"
-      hx-swap="innerHTML"
-      hx-indicator="#login-loading"
-    >
-      {% csrf_token %}
-      {{ form.as_p }}
-
-      {# 👇 preserva o parâmetro next no POST #}
-      {% if request.GET.next %}
-        <input type="hidden" name="next" value="{{ request.GET.next }}">
-      {% endif %}
-
-      <button class="btn btn-primary w-100" type="submit">Entrar</button>
-    </form>
-
-    <hr>
-    <p class="text-muted small">
-      Primeiro login cria automaticamente o período Free (7 dias).
-    </p>
   </div>
 </div>
+
+<script>
+(function(){
+  // Adiciona classes Bootstrap aos inputs se o form não as tiver
+  const form = document.getElementById('ownerLoginForm');
+  if (!form) return;
+
+  // Tenta aplicar .form-control aos inputs de texto/senha/select
+  form.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], select')
+      .forEach(el => { el.classList.add('form-control'); });
+
+  // Toggle de senha
+  const pwdInput = form.querySelector('input[type="password"]');
+  const toggleBtn = document.getElementById('togglePwd');
+  if (pwdInput && toggleBtn) {
+    toggleBtn.addEventListener('click', () => {
+      const isPwd = pwdInput.getAttribute('type') === 'password';
+      pwdInput.setAttribute('type', isPwd ? 'text' : 'password');
+      toggleBtn.textContent = isPwd ? 'Ocultar' : 'Mostrar';
+      pwdInput.focus();
+    });
+  }
+
+  // Spinner no botão + desabilitar no submit (além do hx-disabled-elt)
+  const btn = document.getElementById('loginBtn');
+  form.addEventListener('submit', () => {
+    btn.disabled = true;
+    btn.querySelector('.spinner-border')?.classList.remove('d-none');
+  });
+})();
+</script>

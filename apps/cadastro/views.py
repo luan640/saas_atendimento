@@ -133,7 +133,16 @@ def owner_shops(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
 
+    def _with_public_urls(lojas_qs):
+        lojas_list = list(lojas_qs)
+        for l in lojas_list:
+            # adiciona atributos "dinâmicos" só para exibição
+            l.public_url = l.get_public_url(request)
+            l.public_path = l.get_public_path()
+        return lojas_list
+
     target = request.headers.get('HX-Target')
+
     if request.method == 'POST':
         form = LojaForm(request.POST, user=request.user)
         if form.is_valid():
@@ -142,40 +151,41 @@ def owner_shops(request):
             loja.save()
             messages.success(request, 'Loja criada com sucesso!')
 
-            # Após criar, reconsulta para incluir a nova loja
-            lojas = request.user.lojas.all().order_by('-criada_em')
+            lojas = _with_public_urls(request.user.lojas.all().order_by('-criada_em'))
 
             if request.headers.get('HX-Request') and target != 'content':
-                # Limpa o form e devolve o parcial atualizado
                 form = LojaForm(user=request.user)
-                
-                response = render(request, 'cadastro/partials/owner_shops.html',
-                              {'form': form, 'lojas': lojas})
+                response = render(
+                    request,
+                    'cadastro/partials/owner_shops.html',
+                    {'form': form, 'lojas': lojas}
+                )
                 response['HX-Trigger'] = json.dumps({
                     "show-toast": {"text": "Loja criada!", "level": "success"}
-                })         
+                })
                 return response
 
             return redirect('cadastro:owner_shops')
+
         else:
             errors_nf = list(form.non_field_errors())
             msg = errors_nf[0] if errors_nf else "Erro ao salvar. Verifique os campos."
 
-            # Form inválido → se for HTMX, devolve parcial com erros            
             if request.headers.get('HX-Request') and target != 'content':
-                lojas = request.user.lojas.all().order_by('-criada_em')
-                # status 200 para evitar erro 422 no console do HTMX
-
-                response = render(request, 'cadastro/partials/owner_shops.html', {'form': form, 'lojas': lojas})
+                lojas = _with_public_urls(request.user.lojas.all().order_by('-criada_em'))
+                response = render(
+                    request,
+                    'cadastro/partials/owner_shops.html',
+                    {'form': form, 'lojas': lojas}
+                )
                 response['HX-Trigger'] = json.dumps({
                     "show-toast": {"text": msg, "level": "error"}
                 })
-
                 return response
 
     # GET
     form = LojaForm(user=request.user)
-    lojas = request.user.lojas.all().order_by('-criada_em')
+    lojas = _with_public_urls(request.user.lojas.all().order_by('-criada_em'))
 
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'cadastro/partials/owner_shops.html', {'form': form, 'lojas': lojas})
@@ -248,6 +258,14 @@ def owner_shop_delete(request, pk):
 def funcionarios(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
+
+    def _with_public_urls(lojas_qs):
+        lojas_list = list(lojas_qs)
+        for l in lojas_list:
+            # adiciona atributos "dinâmicos" só para exibição
+            l.public_url = l.get_public_url(request)
+            l.public_path = l.get_public_path()
+        return lojas_list
 
     lojas_qs = request.user.lojas.order_by('nome')
     loja = _get_loja_ativa(request, lojas_qs)
