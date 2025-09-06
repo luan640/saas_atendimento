@@ -1,6 +1,5 @@
 from django.urls import path
 from . import views
-from apps.accounts.views import client_start_loja
 
 app_name = 'cadastro'
 
@@ -26,6 +25,4 @@ urlpatterns = [
     path('clientes/', views.clientes, name='clientes'),
     path('clientes/<int:pk>/edit/', views.cliente_edit, name='cliente_edit'),
     path('clientes/<int:pk>/delete/', views.cliente_delete, name='cliente_delete'),
-
-    path('<slug:slug>/', client_start_loja, name='client_start_loja'),
 ]

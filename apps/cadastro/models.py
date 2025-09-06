@@ -36,12 +36,16 @@ class Loja(models.Model):
         super().save(*args, **kwargs)
 
     def get_public_path(self):
-        return reverse('cadastro:client_start_loja', args=[self.slug])
+        return reverse('accounts:client_start_loja')
 
     def get_public_url(self, request=None):
         path = self.get_public_path()
         if request:
-            return request.build_absolute_uri(path)
+            host = request.get_host().split(':')[0]
+            domain_parts = host.split('.')
+            base_domain = '.'.join(domain_parts[-2:]) if len(domain_parts) >= 2 else host
+            scheme = 'https' if request.is_secure() else 'http'
+            return f"{scheme}://{self.slug}.client.{base_domain}{path}"
         return path
 
     def __str__(self):

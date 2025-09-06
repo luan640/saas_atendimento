@@ -15,6 +15,7 @@ from apps.cadastro.models import Loja, Cliente, Funcionario, Servico
 from apps.accounts.decorators import subscription_required
 from apps.appointments.models import Agendamento
 from apps.appointments.utils import gerar_slots_disponiveis
+from .utils import get_shop_slug_from_host
 
 import random
 import json
@@ -384,9 +385,10 @@ def owner_logout(request):
 
 # ========== CLIENTE (OTP por telefone) ==========
 
-def client_start_loja(request, slug):
+def client_start_loja(request):
 
-    loja = get_object_or_404(Loja, slug=slug, ativa=True)
+    shop_slug = get_shop_slug_from_host(request)
+    loja = get_object_or_404(Loja, slug=shop_slug, ativa=True)
 
     if request.method == 'POST':
         form = ClientStartForm(request.POST)
@@ -403,7 +405,7 @@ def client_start_loja(request, slug):
 
             messages.success(request, "Código de verificação enviado (ver console do servidor).")
             url = reverse('accounts:client_verify')
-            return redirect(f"{url}?phone={phone}&shop={loja.slug}&name={full_name}")
+            return redirect(f"{url}?phone={phone}&name={full_name}")
     else:
         form = ClientStartForm()
 
@@ -416,6 +418,7 @@ def client_verify(request):
         request.GET.get('shop')
         or request.POST.get('shop')
         or request.session.get('shop_slug')
+        or get_shop_slug_from_host(request)
     )
     full_name = request.GET.get('name')
 
@@ -476,13 +479,16 @@ def client_verify(request):
         'form': form,
         'phone': phone,
         'client_start': full_name,
-        'slug': shop_slug,
     })
 
 @login_required
 def client_dashboard(request):
     loja = None
-    shop_slug = request.session.get('shop_slug') or request.GET.get('shop')
+    shop_slug = (
+        request.session.get('shop_slug')
+        or request.GET.get('shop')
+        or get_shop_slug_from_host(request)
+    )
 
     if shop_slug:
         # Import local para evitar dependência circular
@@ -504,13 +510,14 @@ def client_dashboard(request):
     )
 
 @require_POST
-def client_resend_code(request, slug):
+def client_resend_code(request):
     """
     Reemite o OTP via HTMX (POST).
     Espera: phone (POST) ou session['pending_phone'].
     Retorna 204 + HX-Trigger (toast).
     """
-    loja = get_object_or_404(Loja, slug=slug, ativa=True)
+    shop_slug = get_shop_slug_from_host(request)
+    loja = get_object_or_404(Loja, slug=shop_slug, ativa=True)
 
     phone = request.POST.get('phone') or request.session.get('pending_phone')
     if not phone:

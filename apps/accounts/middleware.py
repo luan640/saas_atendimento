@@ -1,8 +1,10 @@
 from django.shortcuts import redirect
 from django.urls import reverse
 
+
 class SubscriptionRequiredMiddleware:
     """Restringe páginas do Owner quando a assinatura estiver expirada."""
+
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -12,7 +14,7 @@ class SubscriptionRequiredMiddleware:
         allowed = (
             reverse('accounts:owner_login'),
             reverse('accounts:owner_logout'),
-            reverse('accounts:client_start_loja', kwargs={"slug": self.slug}),
+            reverse('accounts:client_start_loja'),
             reverse('accounts:client_verify'),
         )
         if request.user.is_authenticated and getattr(request.user, 'is_owner', False):

@@ -75,7 +75,7 @@
           </button>
 
           <div class="d-flex justify-content-between align-items-center mt-3 small">
-            <a class="text-decoration-none" href="{% url 'accounts:client_start_loja' slug %}">
+            <a class="text-decoration-none" href="{% url 'accounts:client_start_loja' %}">
               <i class="bi bi-arrow-left"></i> Trocar telefone
             </a>
             <div>
@@ -83,7 +83,7 @@
               <button type="button"
                       id="resendBtn"
                       class="btn btn-link p-0 ms-2 align-baseline"
-                      hx-post="{% url 'accounts:client_resend_code' slug=slug %}"
+                      hx-post="{% url 'accounts:client_resend_code' %}"
                       hx-vals='{"phone":"{{ phone|default_if_none:"" }}"}'
                       hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}'
                       hx-swap="none"

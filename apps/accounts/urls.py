@@ -19,9 +19,9 @@ urlpatterns = [
     path("sobre/", views.owner_sobre, name="owner_sobre"),
 
     # Cliente (OTP)
-    path('client/start/<slug:slug>/', views.client_start_loja, name='client_start_loja'),
+    path('client/start/', views.client_start_loja, name='client_start_loja'),
     path('client/verify/', views.client_verify, name='client_verify'),
     path('client/dashboard/', views.client_dashboard, name='client_dashboard'),
-    path('client/resend/<slug:slug>/', views.client_resend_code, name='client_resend_code'),
+    path('client/resend/', views.client_resend_code, name='client_resend_code'),
 
 ]
