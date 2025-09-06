@@ -25,9 +25,11 @@ SECRET_KEY = 'django-insecure-1y-(8*b92*9u2&d4hitg(kg_ekkzfa$o&g(ha627i^r+c65+lm
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['geometry-variable-participants-quebec.trycloudflare.com', '127.0.0.1']
-
-CSRF_TRUSTED_ORIGINS = ['https://geometry-variable-participants-quebec.trycloudflare.com']
+ALLOWED_HOSTS = [".seudominio.com", ".localhost", "127.0.0.1"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.seudominio.com",
+    "http://*.localhost:8000",
+]
 
 # Application definition
 
