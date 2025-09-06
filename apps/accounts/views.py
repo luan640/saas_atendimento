@@ -36,6 +36,14 @@ def _issue_otp(phone: str) -> str:
 
 # ========== OWNER ==========
 
+
+def home_redirect(request):
+    """Redirect root path based on subdomain."""
+    if get_shop_slug_from_host(request):
+        return redirect('accounts:client_start_loja')
+    return redirect('accounts:owner_login')
+
+
 def owner_login(request):
     form = OwnerLoginForm(request.POST or None)
 
