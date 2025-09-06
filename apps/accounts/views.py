@@ -38,9 +38,9 @@ def _issue_otp(phone: str) -> str:
 
 
 def home_redirect(request):
-    """Redirect root path based on subdomain."""
+    """Serve client start on shop subdomains; owners go to login."""
     if get_shop_slug_from_host(request):
-        return redirect('accounts:client_start_loja')
+        return client_start_loja(request)
     return redirect('accounts:owner_login')
 
 

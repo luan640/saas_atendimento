@@ -30,10 +30,6 @@ class SubdomainTests(TestCase):
         response = self.client.get(url, HTTP_HOST="loja1.client.testserver")
         self.assertContains(response, "Identifique-se")
 
-    def test_home_redirects_to_client_start(self):
+    def test_home_serves_client_start(self):
         response = self.client.get('/', HTTP_HOST="loja1.client.testserver")
-        self.assertRedirects(
-            response,
-            reverse("accounts:client_start_loja"),
-            fetch_redirect_response=False,
-        )
+        self.assertContains(response, "Identifique-se")

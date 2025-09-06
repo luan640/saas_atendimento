@@ -36,7 +36,7 @@ class Loja(models.Model):
         super().save(*args, **kwargs)
 
     def get_public_path(self):
-        return reverse('accounts:client_start_loja')
+        return reverse('accounts:home')
 
     def get_public_url(self, request=None):
         path = self.get_public_path()

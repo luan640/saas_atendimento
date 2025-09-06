@@ -14,6 +14,7 @@ class SubscriptionRequiredMiddleware:
         allowed = (
             reverse('accounts:owner_login'),
             reverse('accounts:owner_logout'),
+            reverse('accounts:home'),
             reverse('accounts:client_start_loja'),
             reverse('accounts:client_verify'),
         )
