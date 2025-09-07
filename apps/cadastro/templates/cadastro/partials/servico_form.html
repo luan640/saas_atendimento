@@ -92,32 +92,40 @@
         </div>
       {% endif %}
 
-      {# Profissionais (múltiplo) — chips com IDs únicos por modal #}
+      {# Profissionais (múltiplo) — chips com input DENTRO da label #}
       {% if form.profissionais %}
-        {% with selected=form.profissionais.value id_prefix="modalServico-prof-" %}
+        {% with selected=form.profissionais.value %}
         <div class="col-12">
-          <label class="form-label">{{ form.profissionais.label }}</label>
+          <div class="d-flex justify-content-between align-items-center">
+            <label class="form-label m-0">{{ form.profissionais.label }}</label>
+            {% for e in form.profissionais.errors %}
+              <div class="invalid-feedback d-block m-0">{{ e }}</div>
+            {% endfor %}
+          </div>
 
-          {% for e in form.profissionais.errors %}
-            <div class="invalid-feedback d-block">{{ e }}</div>
-          {% endfor %}
-
-          <div class="row g-2" role="group" aria-label="{{ form.profissionais.label }}">
+          <div class="row g-2 prof-chips" role="group" aria-label="{{ form.profissionais.label }}">
             {% for p in form.profissionais.field.queryset %}
-              {% with input_id=id_prefix|add:p.pk|stringformat:"s" %}
-                <div class="col-6 col-md-4 col-lg-3">
-                  <input class="btn-check" type="checkbox" id="{{ input_id }}" name="{{ form.profissionais.html_name }}" value="{{ p.pk }}" {% if selected and p.pk|stringformat:"s" in selected %}checked{% endif %}><label class="btn btn-outline-primary w-100 d-flex align-items-center gap-2" for="{{ input_id }}">
-                    {% if p.foto %}
-                      <img src="{{ p.foto.url }}" alt="{{ p.nome }}" class="rounded-circle" width="28" height="28">
-                    {% else %}
-                      <span class="rounded-circle bg-light border d-inline-flex align-items-center justify-content-center" style="width:28px;height:28px;">
-                        <span class="small fw-semibold">{{ p.nome|first|upper }}</span>
-                      </span>
-                    {% endif %}
-                    <span class="text-truncate">{{ p.nome }}</span>
-                  </label>
-                </div>
-              {% endwith %}
+              <div class="col-6 col-md-4 col-lg-3">
+                <label class="btn btn-outline-primary w-100 d-flex align-items-center gap-2 mb-0">
+                  {# input dentro da label = clique sempre funciona #}
+                  <input
+                    type="checkbox"
+                    class="visually-hidden profissional-check"
+                    name="{{ form.profissionais.html_name }}"
+                    value="{{ p.pk }}"
+                    {% if selected and p.pk|stringformat:"s" in selected %}checked{% endif %}
+                  >
+                  {% if p.foto %}
+                    <img src="{{ p.foto.url }}" alt="{{ p.nome }}" class="rounded-circle" width="28" height="28">
+                  {% else %}
+                    <span class="rounded-circle bg-light border d-inline-flex align-items-center justify-content-center"
+                          style="width:28px;height:28px;">
+                      <span class="small fw-semibold">{{ p.nome|first|upper }}</span>
+                    </span>
+                  {% endif %}
+                  <span class="text-truncate">{{ p.nome }}</span>
+                </label>
+              </div>
             {% endfor %}
           </div>
 
@@ -184,3 +192,23 @@
     <div class="spinner-border" role="status" aria-label="Enviando…"></div>
   </div>
 </form>
+
+<script>
+(function(){
+  // Escopa ao modal aberto (editar)
+  const modal = document.getElementById('modalServicoOps') || document.getElementById('modalServico');
+  if (!modal) return;
+
+  modal.querySelectorAll('.prof-chips label.btn').forEach(label => {
+    const input = label.querySelector('input.profissional-check');
+    if (!input) return;
+
+    const sync = () => label.classList.toggle('active', input.checked);
+    // Estado inicial
+    sync();
+    // Mudou? atualiza
+    input.addEventListener('change', sync);
+    // Clique em qualquer lugar do chip marca/desmarca (input está dentro, então já funciona)
+  });
+})();
+</script>

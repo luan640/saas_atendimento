@@ -589,6 +589,7 @@ def servico_edit(request, pk):
 
     # GET -> carrega form no modal
     form = ServicoForm(instance=serv, lojas=lojas_qs)
+
     return render(request, 'cadastro/partials/servico_form_edit.html',
                   {'form': form, 'servico': serv, 'acao': 'Editar serviço'})
 
