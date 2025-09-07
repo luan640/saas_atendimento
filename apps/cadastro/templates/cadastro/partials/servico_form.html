@@ -9,7 +9,7 @@
   hx-swap="outerHTML"
   hx-indicator="#modalServico .htmx-indicator"
   hx-disabled-elt="input,select,textarea,button"
-  hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalServico')).hide(); } catch(e) {} }"
+  hx-on="htmx:afterRequest: if (event.target.id === 'servicoForm' && event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalServico')).hide(); } catch(e) {} }"
   id="servicoForm"
   novalidate
 >
