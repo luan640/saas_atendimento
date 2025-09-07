@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'apps.cadastro',
     'apps.appointments',
 
+    'widget_tweaks'
+
 ]
 
 MIDDLEWARE = [

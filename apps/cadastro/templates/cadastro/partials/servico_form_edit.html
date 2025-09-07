@@ -1,37 +1,196 @@
+{# cadastro/partials/servico_form_edit.html #}
+{% load widget_tweaks %}
+
 <div class="modal-header">
   <h5 class="modal-title">{{ acao|default:"Editar serviço" }}</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
 </div>
 
-<div class="modal-body">
-  <form method="post"
-        hx-post="{% url 'cadastro:servico_edit' servico.pk %}"
-        hx-target="#servicos-tbody"
-        hx-select="#servicos-tbody"
-        hx-include="#filtros-servicos"
-        hx-swap="outerHTML"
-        hx-indicator="#servicos-loading"
-        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalServicoOps')).hide(); } catch(e) {} }">
-    {% csrf_token %}
-    {{ form.as_p }}
+<form
+  method="post"
+  hx-post="{% url 'cadastro:servico_edit' servico.pk %}"
+  hx-target="#servicos-tbody"
+  hx-select="#servicos-tbody"
+  hx-include="#filtros-servicos"
+  hx-swap="outerHTML"
+  hx-indicator="#servicos-loading"
+  hx-indicator="#btnSalvarServicoEdit .spinner-border"
+  hx-disabled-elt="input,select,textarea,button"
+  hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalServicoOps')).hide(); } catch(e) {} }"
+  id="servicoEditForm"
+  novalidate
+>
+  {% csrf_token %}
 
-    {% if form and form.errors %}
-      <div class="alert alert-danger">
-        <strong>Erros no formulário:</strong>
-        <ul class="mb-0">
-          {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
-          {% for field in form %}
-            {% for e in field.errors %}
-              <li><strong>{{ field.label }}:</strong> {{ e }}</li>
-            {% endfor %}
-          {% endfor %}
-        </ul>
+  <div class="modal-body">
+
+    {# erros gerais (ex.: ValidationError do clean) #}
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger py-2" role="alert">
+        {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
       </div>
     {% endif %}
 
-    <div class="d-flex justify-content-end gap-2">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-      <button type="submit" class="btn btn-primary">Salvar</button>
+    <div class="row g-3">
+      {# Nome #}
+      {% if form.nome %}
+        <div class="col-12">
+          <label class="form-label" for="{{ form.nome.id_for_label }}">
+            {{ form.nome.label }}{% if form.nome.field.required %} <span class="text-danger">*</span>{% endif %}
+          </label>
+          {% if form.nome.errors %}
+            {% render_field form.nome class+="form-control is-invalid" placeholder=form.nome.label %}
+          {% else %}
+            {% render_field form.nome class+="form-control" placeholder=form.nome.label %}
+          {% endif %}
+          {% for e in form.nome.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Preço #}
+      {% if form.preco %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.preco.id_for_label }}">
+            {{ form.preco.label }}{% if form.preco.field.required %} <span class="text-danger">*</span>{% endif %}
+          </label>
+          <div class="input-group">
+            <span class="input-group-text">R$</span>
+            {% if form.preco.errors %}
+              {% render_field form.preco class+="form-control text-end is-invalid" step="0.01" min="0" %}
+            {% else %}
+              {% render_field form.preco class+="form-control text-end" step="0.01" min="0" %}
+            {% endif %}
+          </div>
+          {% for e in form.preco.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Duração (min) #}
+      {% if form.duracao_minutos %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.duracao_minutos.id_for_label }}">
+            {{ form.duracao_minutos.label }}{% if form.duracao_minutos.field.required %} <span class="text-danger">*</span>{% endif %}
+          </label>
+          <div class="input-group">
+            {% if form.duracao_minutos.errors %}
+              {% render_field form.duracao_minutos class+="form-control text-end is-invalid" type="number" min="0" step="5" %}
+            {% else %}
+              {% render_field form.duracao_minutos class+="form-control text-end" type="number" min="0" step="5" %}
+            {% endif %}
+            <span class="input-group-text">min</span>
+          </div>
+          {% for e in form.duracao_minutos.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+
+      {# Loja (se exposto) #}
+      {% if form.loja %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.loja.id_for_label }}">{{ form.loja.label }}</label>
+          {% if form.loja.errors %}
+            {% render_field form.loja class+="form-select is-invalid" %}
+          {% else %}
+            {% render_field form.loja class+="form-select" %}
+          {% endif %}
+          {% for e in form.loja.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Profissionais (múltiplo) — chips com IDs únicos por modal+serviço #}
+      {% if form.profissionais %}
+        {% with selected=form.profissionais.value id_prefix="modalServicoOps-"|add:servico.pk|stringformat:"s"|add:"-prof-" %}
+        <div class="col-12">
+          <label class="form-label">{{ form.profissionais.label }}</label>
+
+          {% for e in form.profissionais.errors %}
+            <div class="invalid-feedback d-block">{{ e }}</div>
+          {% endfor %}
+
+          <div class="row g-2" role="group" aria-label="{{ form.profissionais.label }}">
+            {% for p in form.profissionais.field.queryset %}
+              {% with input_id=id_prefix|add:p.pk|stringformat:"s" %}
+                <div class="col-6 col-md-4 col-lg-3">
+                  <input
+                    class="btn-check"
+                    type="checkbox"
+                    id="{{ input_id }}"
+                    name="{{ form.profissionais.html_name }}"
+                    value="{{ p.pk }}"
+                    {% if selected and p.pk|stringformat:"s" in selected %}checked{% endif %}
+                  >
+                  <label class="btn btn-outline-primary w-100 d-flex align-items-center gap-2" for="{{ input_id }}">
+                    {% if p.foto %}
+                      <img src="{{ p.foto.url }}" alt="{{ p.nome }}" class="rounded-circle" width="28" height="28">
+                    {% else %}
+                      <span class="rounded-circle bg-light border d-inline-flex align-items-center justify-content-center"
+                            style="width:28px;height:28px;">
+                        <span class="small fw-semibold">{{ p.nome|first|upper }}</span>
+                      </span>
+                    {% endif %}
+                    <span class="text-truncate">{{ p.nome }}</span>
+                  </label>
+                </div>
+              {% endwith %}
+            {% endfor %}
+          </div>
+
+          <div class="form-text mt-1">Toque/clique para marcar. Você pode escolher mais de um.</div>
+        </div>
+        {% endwith %}
+      {% endif %}
+      
+      {# Ativo (checkbox) #}
+      {% if form.ativo %}
+        <div class="col-12 col-md-6 d-flex align-items-end">
+          <div class="form-check">
+            {% render_field form.ativo class+="form-check-input" %}
+            <label class="form-check-label ms-1" for="{{ form.ativo.id_for_label }}">{{ form.ativo.label }}</label>
+            {% for e in form.ativo.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {# Descrição opcional #}
+      {% if form.descricao %}
+        <div class="col-12">
+          <label class="form-label" for="{{ form.descricao.id_for_label }}">{{ form.descricao.label }}</label>
+          {% if form.descricao.errors %}
+            {% render_field form.descricao class+="form-control is-invalid" rows="3" %}
+          {% else %}
+            {% render_field form.descricao class+="form-control" rows="3" %}
+          {% endif %}
+          {% for e in form.descricao.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Fallback para campos não mapeados #}
+      {% for field in form %}
+        {% if not field.is_hidden and field.name not in 'nome preco duracao_minutos profissionais loja ativo descricao' %}
+          <div class="col-12">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.errors %}
+              {% render_field field class+="form-control is-invalid" %}
+            {% else %}
+              {% render_field field class+="form-control" %}
+            {% endif %}
+            {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      {# Campos ocultos #}
+      {% for field in form %}
+        {% if field.is_hidden %}{{ field }}{% endif %}
+      {% endfor %}
     </div>
-  </form>
-</div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary" id="btnSalvarServicoEdit">
+      <span class="btn-label-text">Salvar</span>
+      <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+    </button>
+  </div>
+</form>

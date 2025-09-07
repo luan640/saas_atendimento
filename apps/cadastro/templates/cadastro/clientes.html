@@ -1,4 +1,6 @@
 {% extends 'accounts/index.html' %}
+{% load widget_tweaks %}
+
 {% block title %}Clientes{% endblock %}
 
 {% block content %}
@@ -20,37 +22,71 @@
 
 <!-- Modal add cliente -->
 <div class="modal fade" id="modalCliente" tabindex="-1" aria-labelledby="modalClienteLabel" aria-hidden="true">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="modalClienteLabel">Novo cliente</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
+
       <div class="modal-body" id="modal-cliente-body">
-        <form method="post"
-              hx-post="{% url 'cadastro:clientes' %}"
-              hx-target="#clientes-tbody"
-              hx-select="#clientes-tbody"
-              hx-swap="outerHTML"
-              hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCliente')).hide(); } catch(e) {} }">
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2" role="alert">
+            {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
+          </div>
+        {% endif %}
+
+        <form
+          method="post"
+          hx-post="{% url 'cadastro:clientes' %}"
+          hx-target="#clientes-tbody"
+          hx-select="#clientes-tbody"
+          hx-swap="outerHTML"
+          hx-indicator="#modalCliente .htmx-indicator"
+          hx-disabled-elt="input,select,textarea,button"
+          hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCliente')).hide(); } catch(e) {} }"
+          id="clienteForm"
+          novalidate
+        >
           {% csrf_token %}
-          {{ form.as_p }}
-          {% if form and form.errors %}
-            <div class="alert alert-danger">
-              <strong>Erros no formulário:</strong>
-              <ul class="mb-0">
-                {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
-                {% for field in form %}
-                  {% for e in field.errors %}
-                    <li><strong>{{ field.label }}:</strong> {{ e }}</li>
-                  {% endfor %}
-                {% endfor %}
-              </ul>
-            </div>
-          {% endif %}
-          <div class="d-flex justify-content-end gap-2">
+
+          <div class="row g-3">
+            {% for field in form %}
+              {% if field.is_hidden %}
+                {{ field }}
+              {% else %}
+                <div class="col-12 {% if field.name in 'email telefone phone' %}col-md-6{% endif %}">
+                  <label class="form-label" for="{{ field.id_for_label }}">
+                    {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                  </label>
+
+                  {% if field.field.widget.input_type == "checkbox" %}
+                    {% render_field field class+="form-check-input" %}
+                  {% else %}
+                    {% if field.errors %}
+                      {% render_field field class+="form-control is-invalid" placeholder=field.label %}
+                    {% else %}
+                      {% render_field field class+="form-control" placeholder=field.label %}
+                    {% endif %}
+                  {% endif %}
+
+                  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                  {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-4">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Salvar</button>
+            <button type="submit" class="btn btn-primary" id="btnSalvarCliente">
+              <span class="btn-label-text">Salvar</span>
+              <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <div class="htmx-indicator text-center mt-3">
+            <div class="spinner-border" role="status" aria-label="Enviando…"></div>
           </div>
         </form>
       </div>
@@ -64,4 +100,25 @@
     <div class="modal-content"></div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+  (function(){
+    const form = document.getElementById('clienteForm');
+    if (!form) return;
+
+    // Garante .form-control nos inputs comuns, caso o widget não tenha
+    form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input:not([type]), textarea')
+        .forEach(el => el.classList.add('form-control'));
+
+    // Spinner no botão ao enviar
+    const btn = document.getElementById('btnSalvarCliente');
+    form.addEventListener('submit', () => {
+      btn.querySelector('.spinner-border')?.classList.remove('d-none');
+    });
+  })();
+</script>
+
 {% endblock %}
