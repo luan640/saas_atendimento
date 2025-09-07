@@ -156,9 +156,10 @@ class ServicoForm(forms.ModelForm):
             "hx-get": url,
             "hx-target": "#modal-servico-body",
             "hx-select": "#modal-servico-body",
-            "hx-include": "closest form",
             "hx-trigger": "change",
             "hx-swap": "outerHTML",
+            "hx-include": "this",
+
         })
 
         loja_valor = self.data.get("loja") or self.initial.get("loja")

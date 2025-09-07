@@ -531,11 +531,13 @@ def servicos(request):
 @subscription_required
 def servico_form(request):
     """Recarrega o formulário de serviço para atualizar profissionais conforme a loja."""
-    if not getattr(request.user, 'is_owner', False):
-        return redirect('accounts:owner_login')
-
     lojas_qs = request.user.lojas.order_by('nome')
-    form = ServicoForm(request.GET or None, lojas=lojas_qs)
+    data = None
+    if request.headers.get('HX-Request') and request.method == 'GET':
+        # só liga 'loja' para o form decidir a queryset dos profissionais
+        if 'loja' in request.GET:
+            data = {'loja': request.GET.get('loja')}
+    form = ServicoForm(data=data, lojas=lojas_qs)
     return render(request, 'cadastro/partials/servico_form.html', {'form': form})
 
 @login_required

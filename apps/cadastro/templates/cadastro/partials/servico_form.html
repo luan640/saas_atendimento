@@ -4,14 +4,24 @@
 <form
   method="post"
   hx-post="{% url 'cadastro:servicos' %}"
-  hx-target="#servicos-tbody"           {# ajuste o ID se seu tbody tiver outro nome #}
+  hx-target="#servicos-tbody"
   hx-select="#servicos-tbody"
   hx-swap="outerHTML"
   hx-indicator="#modalServico .htmx-indicator"
   hx-disabled-elt="input,select,textarea,button"
-  hx-on="htmx:afterRequest: if (event.target.id === 'servicoForm' && event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalServico')).hide(); } catch(e) {} }"
   id="servicoForm"
   novalidate
+  hx-on="htmx:afterRequest:
+    if (
+      event.detail &&
+      event.detail.elt === this &&
+      (event.detail.requestConfig?.verb || '').toLowerCase() === 'post' &&
+      event.detail.xhr.status < 400
+    ) {
+      try { bootstrap.Modal.getOrCreateInstance(this.closest('.modal')).hide(); } catch(e) {}
+    }"
+  hx-on="htmx:afterRequest: console.log('elt:', event.detail.elt, 'verb:', event.detail.requestConfig?.verb, 'status:', event.detail.xhr.status)"
+
 >
   {% csrf_token %}
 
