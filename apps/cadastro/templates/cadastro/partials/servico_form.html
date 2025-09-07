@@ -106,20 +106,11 @@
             {% for p in form.profissionais.field.queryset %}
               {% with input_id=id_prefix|add:p.pk|stringformat:"s" %}
                 <div class="col-6 col-md-4 col-lg-3">
-                  <input
-                    class="btn-check"
-                    type="checkbox"
-                    id="{{ input_id }}"
-                    name="{{ form.profissionais.html_name }}"
-                    value="{{ p.pk }}"
-                    {% if selected and p.pk|stringformat:"s" in selected %}checked{% endif %}
-                  >
-                  <label class="btn btn-outline-primary w-100 d-flex align-items-center gap-2" for="{{ input_id }}">
+                  <input class="btn-check" type="checkbox" id="{{ input_id }}" name="{{ form.profissionais.html_name }}" value="{{ p.pk }}" {% if selected and p.pk|stringformat:"s" in selected %}checked{% endif %}><label class="btn btn-outline-primary w-100 d-flex align-items-center gap-2" for="{{ input_id }}">
                     {% if p.foto %}
                       <img src="{{ p.foto.url }}" alt="{{ p.nome }}" class="rounded-circle" width="28" height="28">
                     {% else %}
-                      <span class="rounded-circle bg-light border d-inline-flex align-items-center justify-content-center"
-                            style="width:28px;height:28px;">
+                      <span class="rounded-circle bg-light border d-inline-flex align-items-center justify-content-center" style="width:28px;height:28px;">
                         <span class="small fw-semibold">{{ p.nome|first|upper }}</span>
                       </span>
                     {% endif %}
