@@ -147,11 +147,16 @@ class ServicoForm(forms.ModelForm):
         lojas = kwargs.pop("lojas", Loja.objects.none())
         super().__init__(*args, **kwargs)
         self.fields["loja"].queryset = lojas
+
+        url = reverse("cadastro:servico_form")
+        if self.instance.pk:
+            url = reverse("cadastro:servico_edit", args=[self.instance.pk])
+
         self.fields["loja"].widget.attrs.update({
-            "hx-get": reverse("cadastro:servico_form"),
+            "hx-get": url,
             "hx-target": "#modal-servico-body",
             "hx-select": "#modal-servico-body",
-            "hx-include": "#form-servico",
+            "hx-include": "closest form",
             "hx-trigger": "change",
             "hx-swap": "outerHTML",
         })

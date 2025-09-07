@@ -15,7 +15,7 @@
 >
   {% csrf_token %}
 
-  <div class="modal-body">
+  <div class="modal-body" id="modal-servico-body">
 
     {# erros gerais (ex.: ValidationError do clean) #}
     {% if form.non_field_errors %}
@@ -129,7 +129,7 @@
             {% endfor %}
           </div>
 
-          <div class="form-text mt-1">Toque/clique para marcar. Você pode escolher mais de um.</div>
+    <div class="form-text mt-1">Toque/clique para marcar. Você pode escolher mais de um.</div>
         </div>
         {% endwith %}
       {% endif %}
@@ -156,7 +156,7 @@
           {% endif %}
           {% for e in form.descricao.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
         </div>
-      {% endif %}
+    {% endif %}
 
       {# Fallback: se algum campo não mapeado acima existir #}
       {% for field in form %}
@@ -178,6 +178,24 @@
         {% if field.is_hidden %}{{ field }}{% endif %}
       {% endfor %}
     </div>
+
+    <script>
+    (function(){
+      // Escopa ao modal aberto (editar)
+      const modal = document.getElementById('modalServicoOps') || document.getElementById('modalServico');
+      if (!modal) return;
+      modal.querySelectorAll('.prof-chips label.btn').forEach(label => {
+        const input = label.querySelector('input.profissional-check');
+        if (!input) return;
+        const sync = () => label.classList.toggle('active', input.checked);
+        // Estado inicial
+        sync();
+        // Mudou? atualiza
+        input.addEventListener('change', sync);
+        // Clique em qualquer lugar do chip marca/desmarca (input está dentro, então já funciona)
+      });
+    })();
+    </script>
   </div>
 
   <div class="modal-footer">
@@ -192,23 +210,3 @@
     <div class="spinner-border" role="status" aria-label="Enviando…"></div>
   </div>
 </form>
-
-<script>
-(function(){
-  // Escopa ao modal aberto (editar)
-  const modal = document.getElementById('modalServicoOps') || document.getElementById('modalServico');
-  if (!modal) return;
-
-  modal.querySelectorAll('.prof-chips label.btn').forEach(label => {
-    const input = label.querySelector('input.profissional-check');
-    if (!input) return;
-
-    const sync = () => label.classList.toggle('active', input.checked);
-    // Estado inicial
-    sync();
-    // Mudou? atualiza
-    input.addEventListener('change', sync);
-    // Clique em qualquer lugar do chip marca/desmarca (input está dentro, então já funciona)
-  });
-})();
-</script>

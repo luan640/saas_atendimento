@@ -587,8 +587,8 @@ def servico_edit(request, pk):
         response['HX-Reswap'] = 'innerHTML'  # opcional, explicita o swap
         return response
 
-    # GET -> carrega form no modal
-    form = ServicoForm(instance=serv, lojas=lojas_qs)
+    # GET -> carrega form no modal (suporta recarga via HTMX)
+    form = ServicoForm(request.GET or None, instance=serv, lojas=lojas_qs)
 
     return render(request, 'cadastro/partials/servico_form_edit.html',
                   {'form': form, 'servico': serv, 'acao': 'Editar serviço'})
