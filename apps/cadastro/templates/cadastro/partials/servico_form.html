@@ -191,19 +191,22 @@
 
     <script>
     (function(){
-      // Escopa ao modal aberto (editar)
-      const modal = document.getElementById('modalServicoOps') || document.getElementById('modalServico');
-      if (!modal) return;
-      modal.querySelectorAll('.prof-chips label.btn').forEach(label => {
-        const input = label.querySelector('input.profissional-check');
-        if (!input) return;
-        const sync = () => label.classList.toggle('active', input.checked);
-        // Estado inicial
-        sync();
-        // Mudou? atualiza
-        input.addEventListener('change', sync);
-        // Clique em qualquer lugar do chip marca/desmarca (input está dentro, então já funciona)
-      });
+      function initProfChips() {
+        const modal = document.getElementById('modalServicoOps') || document.getElementById('modalServico');
+        if (!modal) return;
+        modal.querySelectorAll('.prof-chips label.btn').forEach(label => {
+          const input = label.querySelector('input.profissional-check');
+          if (!input) return;
+          const sync = () => label.classList.toggle('active', input.checked);
+          sync();
+          input.addEventListener('change', sync);
+        });
+      }
+      if (window.htmx) {
+        htmx.onLoad(() => initProfChips());
+      } else {
+        initProfChips();
+      }
     })();
     </script>
   </div>
