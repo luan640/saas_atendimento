@@ -532,12 +532,22 @@ def servicos(request):
 def servico_form(request):
     """Recarrega o formulário de serviço para atualizar profissionais conforme a loja."""
     lojas_qs = request.user.lojas.order_by('nome')
-    data = None
+
+    # GET via HTMX para trocar profissionais ao mudar a loja
     if request.headers.get('HX-Request') and request.method == 'GET':
-        # só liga 'loja' para o form decidir a queryset dos profissionais
-        if 'loja' in request.GET:
-            data = {'loja': request.GET.get('loja')}
-    form = ServicoForm(data=data, lojas=lojas_qs)
+        loja_id = request.GET.get('loja')
+        initial = {}
+        if loja_id:
+            try:
+                initial['loja'] = int(loja_id)
+            except (TypeError, ValueError):
+                pass
+        # IMPORTANTE: não passe data=request.GET
+        form = ServicoForm(lojas=lojas_qs, initial=initial)
+        return render(request, 'cadastro/partials/servico_form.html', {'form': form})
+
+    # GET normal (abrir modal vazio)
+    form = ServicoForm(lojas=lojas_qs)
     return render(request, 'cadastro/partials/servico_form.html', {'form': form})
 
 @login_required
@@ -573,7 +583,8 @@ def servico_edit(request, pk):
             response = render(request, 'cadastro/partials/servicos.html', ctx)
             response['HX-Trigger'] = json.dumps({"show-toast": {"text": "Serviço atualizado!", "level": "success"}})
             return response
-
+        else:
+            print(form.errors)
         # ------ ERROS: manter o modal aberto ------
         errors_nf = list(form.non_field_errors())
         msg = errors_nf[0] if errors_nf else "Erro ao salvar. Verifique os campos."

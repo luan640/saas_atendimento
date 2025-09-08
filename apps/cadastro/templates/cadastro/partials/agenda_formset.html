@@ -1,34 +1,125 @@
+{% load widget_tweaks %}
 {% if formset %}
   {{ formset.management_form }}
-  <div class="table-responsive mb-3">
-    <table class="table table-sm">
-      <thead>
-        <tr>
-          <th>Dia</th>
-          <th>Início</th>
-          <th>Fim</th>
-          <th>Almoço início</th>
-          <th>Almoço fim</th>
-          <th>Ativo?</th>
-          {% if formset.can_delete %}<th>Excluir</th>{% endif %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for fs in formset.forms %}
-          <tr>
-            <td>
-              {{ fs.id }}
-              {{ fs.weekday }}
-            </td>
-            <td>{{ fs.inicio }}</td>
-            <td>{{ fs.fim }}</td>
-            <td>{{ fs.almoco_inicio }}</td>
-            <td>{{ fs.almoco_fim }}</td>
-            <td>{{ fs.ativo }}</td>
-            {% if formset.can_delete %}<td>{{ fs.DELETE }}</td>{% endif %}
+
+  <style>
+    .agenda-card .table-sticky thead th.sticky-col,
+    .agenda-card .table-sticky tbody td.sticky-col{
+      position: sticky; left: 0; background: var(--bs-body-bg);
+      z-index: 1; box-shadow: 4px 0 0 rgba(0,0,0,.03);
+    }
+    .agenda-card .table-sticky thead th.sticky-col{
+      z-index:5; box-shadow: 6px 0 0 rgba(0,0,0,.06);
+    }
+  </style>
+
+  <div class="card mt-3 agenda-card">
+    <div class="card-header py-2">
+      <strong>Agenda / Horários</strong>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0 table-sticky">
+        <thead class="table-light">
+          <tr class="text-nowrap">
+            <th class="sticky-col" style="min-width:140px;">Dia</th>
+            <th>Início</th>
+            <th>Fim</th>
+            <th>Almoço início</th>
+            <th>Almoço fim</th>
+            <th title="Intervalo de slots (min)">Intervalo</th>
+            <th class="text-center">Ativo?</th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+
+        <tbody>
+          {% for fs in formset.forms %}
+            <tr>
+              {# DIA FIXO: mostra label e envia o valor como hidden #}
+              <td class="sticky-col">
+                {{ fs.id }} {# hidden id #}
+                {{ fs.weekday.as_hidden }}
+                <div class="fw-semibold">
+                  {% with v=fs.weekday.value|stringformat:"s" %}
+                    {% if v %}
+                      {% for val,label in fs.weekday.field.choices %}
+                        {% if val|stringformat:"s" == v %}{{ label }}{% endif %}
+                      {% endfor %}
+                    {% else %} — {% endif %}
+                  {% endwith %}
+                </div>
+                {% if fs.weekday.errors %}
+                  <div class="text-danger small">
+                    {% for e in fs.weekday.errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                  </div>
+                {% endif %}
+              </td>
+
+              <td class="w-25">
+                {% if fs.inicio.errors %}
+                  {% render_field fs.inicio class+="form-control form-control-sm is-invalid text-end" %}
+                  {% for e in fs.inicio.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                {% else %}
+                  {% render_field fs.inicio class+="form-control form-control-sm text-end" %}
+                {% endif %}
+              </td>
+
+              <td class="w-25">
+                {% if fs.fim.errors %}
+                  {% render_field fs.fim class+="form-control form-control-sm is-invalid text-end" %}
+                  {% for e in fs.fim.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                {% else %}
+                  {% render_field fs.fim class+="form-control form-control-sm text-end" %}
+                {% endif %}
+              </td>
+
+              <td class="w-25">
+                {% if fs.almoco_inicio.errors %}
+                  {% render_field fs.almoco_inicio class+="form-control form-control-sm is-invalid text-end" %}
+                  {% for e in fs.almoco_inicio.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                {% else %}
+                  {% render_field fs.almoco_inicio class+="form-control form-control-sm text-end" %}
+                {% endif %}
+              </td>
+
+              <td class="w-25">
+                {% if fs.almoco_fim.errors %}
+                  {% render_field fs.almoco_fim class+="form-control form-control-sm is-invalid text-end" %}
+                  {% for e in fs.almoco_fim.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                {% else %}
+                  {% render_field fs.almoco_fim class+="form-control form-control-sm text-end" %}
+                {% endif %}
+              </td>
+
+              <td class="w-25">
+                {% if fs.slot_interval_minutes.errors %}
+                  {% render_field fs.slot_interval_minutes class+="form-control form-control-sm is-invalid text-end" min="0" step="5" %}
+                  {% for e in fs.slot_interval_minutes.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                {% else %}
+                  {% render_field fs.slot_interval_minutes class+="form-control form-control-sm text-end" min="0" step="5" %}
+                {% endif %}
+              </td>
+
+              {# ATIVO? — apenas ativa/desativa (sem excluir) #}
+              <td class="text-center">
+                <div class="form-check form-switch d-inline-flex align-items-center justify-content-center">
+                  {% render_field fs.ativo class+="form-check-input" aria-label="Ativar/Desativar linha" %}
+                </div>
+              </td>
+            </tr>
+
+            {% if fs.non_field_errors %}
+              <tr>
+                <td colspan="7">
+                  <div class="alert alert-danger py-1 mb-2">
+                    {% for e in fs.non_field_errors %}<div>{{ e }}</div>{% endfor %}
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 {% endif %}

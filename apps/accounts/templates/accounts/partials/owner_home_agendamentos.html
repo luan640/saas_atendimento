@@ -1,6 +1,12 @@
+{# apps/accounts/templates/accounts/partials/owner_home_agendamentos.html #}
+
 <div id="agendamentos-section">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="m-0">Agendamentos</h5>
+  <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <h5 class="m-0">Agendamentos</h5>
+      <span class="badge bg-warning text-dark">Pendentes: {{ total_pendentes }}</span>
+    </div>
+
     <form id="filtro-agendamentos" class="d-flex align-items-center gap-2">
       <label class="form-label m-0">Loja:</label>
       <select name="loja_filtro" class="form-select form-select-sm"
@@ -16,51 +22,93 @@
     </form>
   </div>
 
-  <div class="row">
-    <!-- TABELA AGENDAMENTO PENDENTE -->
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-md-flex align-items-center">
-            <div>
-              <p class="card-subtitle">
-                Pendente
-              </p>
-            </div>
-            <div class="ms-auto mt-3 mt-md-0">
-              <span class="badge bg-warning text-dark">{{ total_pendentes }}</span>
-            </div>
-          </div>
-          <div class="table-responsive mt-4">
-            <table class="table mb-0 text-nowrap varient-table align-middle fs-3">
-              <thead>
-                <tr>
-                  <th>Data/Hora</th>
-                  <th>Profissional</th>
-                  <th>Cliente</th>
-                  <th>Serviços</th>
-                  <th>Status</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for a in pendentes %}
-                <tr>
-                  <td>{{ a.data|date:"d/m/Y" }} {{ a.hora|time:"H:i" }}</td>
-                  <td>{{ a.funcionario.nome }}</td>
-                  <td>{{ a.cliente.full_name }} - {{a.cliente.phone}}
-                  <td>
-                    {% if a.servicos.all %}
-                      {% for s in a.servicos.all %}
-                        <span class="badge text-bg-light">{{ s.nome }}</span>
-                      {% endfor %}
-                    {% else %}
-                      <span class="text-muted">—</span>
-                    {% endif %}
-                  </td>
-                  <td>{% if a.no_show %}Não compareceu{% elif a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-success"
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <a class="btn btn-sm btn-outline-secondary"
+       hx-get="{% url 'accounts:owner_home_agendamentos' %}?y={{ prev_y }}&m={{ prev_m }}{% if loja %}&loja_filtro={{ loja.id }}{% endif %}"
+       hx-target="#agendamentos-section"
+       hx-select="#agendamentos-section"
+       hx-swap="outerHTML">
+      ‹ Mês anterior
+    </a>
+
+    <div class="fw-semibold fs-5">
+      {{ current|date:"F Y" }}
+    </div>
+
+    <a class="btn btn-sm btn-outline-secondary"
+       hx-get="{% url 'accounts:owner_home_agendamentos' %}?y={{ next_y }}&m={{ next_m }}{% if loja %}&loja_filtro={{ loja.id }}{% endif %}"
+       hx-target="#agendamentos-section"
+       hx-select="#agendamentos-section"
+       hx-swap="outerHTML">
+      Próximo mês ›
+    </a>
+  </div>
+
+  <style>
+    .calendar { table-layout: fixed; width: 100%; }
+    .calendar th, .calendar td { vertical-align: top; }
+    .calendar .dow { text-transform: uppercase; font-size: .8rem; letter-spacing: .02em; }
+    .cal-cell {
+      height: 12.5rem;                  /* altura do dia */
+      overflow: auto;                   /* scroll interno se estourar */
+      background: var(--bs-body-bg);
+    }
+    .cal-cell.muted { color: var(--bs-secondary-color); background: var(--bs-tertiary-bg); }
+    .cal-cell.today { outline: 2px solid var(--bs-primary); outline-offset: -4px; border-radius: .5rem; }
+    .cal-dayhead { display: flex; justify-content: space-between; align-items: baseline; }
+    .cal-count { font-size: .75rem; }
+    .evt {
+      font-size: .85rem;
+      border-left: 3px solid #f1c40f;   /* pendente = amarelo */
+      background: var(--bs-light);
+      padding: .25rem .5rem;
+      border-radius: .25rem;
+    }
+    .evt + .evt { margin-top: .25rem; }
+    .evt .meta { color: var(--bs-secondary-color); }
+    .evt .actions { text-align: right; }
+  </style>
+
+  <table class="table table-bordered calendar mb-0">
+    <thead class="table-light">
+      <tr class="text-center">
+        <th class="dow">Seg</th>
+        <th class="dow">Ter</th>
+        <th class="dow">Qua</th>
+        <th class="dow">Qui</th>
+        <th class="dow">Sex</th>
+        <th class="dow">Sáb</th>
+        <th class="dow">Dom</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+        <tr>
+          {% for day, items in week %}
+            {# dia de outro mês = "muted"; hoje = "today" #}
+            <td class="cal-cell {% if day.month != current.month %}muted{% endif %} {% if day == today %}today{% endif %}">
+              <div class="cal-dayhead">
+                <span class="fw-semibold">{{ day|date:"j" }}</span>
+                {% if items %}<span class="cal-count badge bg-warning text-dark">{{ items|length }}</span>{% endif %}
+              </div>
+
+              {% for a in items %}
+                <div class="evt">
+                  <div class="d-flex justify-content-between">
+                    <div><strong>{{ a.hora|time:"H:i" }}</strong> • {{ a.funcionario.nome }}</div>
+                  </div>
+                  <div class="meta">
+                    {{ a.cliente.full_name }}{% if a.cliente.phone %} — {{ a.cliente.phone }}{% endif %}
+                  </div>
+                  <div class="mt-1 d-flex flex-wrap gap-1">
+                    {% for s in a.servicos.all %}
+                      <span class="badge text-bg-light">{{ s.nome }}</span>
+                    {% empty %}
+                      <span class="text-muted small">Sem serviços</span>
+                    {% endfor %}
+                  </div>
+                  <div class="actions mt-1">
+                    <button class="btn btn-xs btn-outline-success"
                             data-bs-toggle="modal"
                             data-bs-target="#modalShell"
                             hx-get="{% url 'appointments:finalizar_agendamento' a.pk %}"
@@ -68,71 +116,13 @@
                             hx-swap="innerHTML">
                       Finalizar
                     </button>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6" class="text-muted">Sem pendentes.</td></tr>
-                {% endfor %}
-
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TABELA AGENDAMENTO REALIZADO -->
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-body">
-          <div class="d-md-flex align-items-center">
-            <div>
-              <p class="card-subtitle">
-                Realizado
-              </p>
-            </div>
-            <div class="ms-auto mt-3 mt-md-0">
-              <span class="badge bg-success">{{ total_realizados }}</span>
-            </div>
-          </div>
-          <div class="table-responsive mt-4">
-            <table class="table mb-0 text-nowrap varient-table align-middle fs-3">
-              <thead>
-                <tr>
-                  <th>Data/Hora</th>
-                  <th>Profissional</th>
-                  <th>Cliente</th>
-                  <th>Serviços</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for a in realizados %}
-                <tr>
-                  <td>{{ a.data|date:"d/m/Y" }} {{ a.hora|time:"H:i" }}</td>
-                  <td>{{ a.funcionario.nome }}</td>
-                  <td>{{ a.cliente.full_name }} - {{a.cliente.phone}}
-                  </td>
-                  <td>
-                    {% if a.servicos.all %}
-                      {% for s in a.servicos.all %}
-                        <span class="badge text-bg-light">{{ s.nome }}</span>
-                      {% endfor %}
-                    {% else %}
-                      <span class="text-muted">—</span>
-                    {% endif %}
-                  </td>
-                  <td>{% if a.no_show %}Não compareceu{% elif a.confirmado %}Confirmado{% else %}Pendente{% endif %}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6" class="text-muted">Sem realizados.</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
+                  </div>
+                </div>
+              {% endfor %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>

@@ -82,21 +82,7 @@
           {% for e in form.duracao_minutos.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
         </div>
       {% endif %}
-
-
-      {# Loja (se exposto) #}
-      {% if form.loja %}
-        <div class="col-12 col-md-6">
-          <label class="form-label" for="{{ form.loja.id_for_label }}">{{ form.loja.label }}</label>
-          {% if form.loja.errors %}
-            {% render_field form.loja class+="form-select is-invalid" %}
-          {% else %}
-            {% render_field form.loja class+="form-select" %}
-          {% endif %}
-          {% for e in form.loja.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-        </div>
-      {% endif %}
-
+      
       {# Profissionais (múltiplo) — chips com input DENTRO da label + fallback ao servico #}
       {% if form.profissionais %}
         {% with selected=form.profissionais.value %}
