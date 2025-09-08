@@ -40,11 +40,11 @@ class Loja(models.Model):
 
     def get_public_url(self, request=None):
         """
-        Monta algo como:
+        Monta URLs do tipo:
         - DEV:
-          http://<slug>.client.localhost:8000<path>
-        - PROD (se acessar de lojaX.client.seudominio.com):
-          https://<slug>.client.seudominio.com<path>
+          http://<slug>.<first_name>.localhost:PORT<path>
+        - PROD:
+          https://<slug>.<first_name>.<base_domain><path>
         """
         path = self.get_public_path()
         if not request:
@@ -60,22 +60,19 @@ class Loja(models.Model):
         labels = domain.split(".")
         scheme = "https" if request.is_secure() else "http"
 
-        # 1) Se já estamos em algo como lojaX.client.localhost ou client.localhost
-        try:
-            idx = labels.index("client")
-            # pega "client.localhost" ou "client.seudominio.com"
-            rest = ".".join(labels[idx:])
-        except ValueError:
-            # 2) Fallbacks:
-            # - se é localhost OU um IPv4 (ex.: 127.0.0.1), use client.localhost
-            is_ipv4 = (len(labels) == 4 and all(p.isdigit() for p in labels))
-            if labels[-1] == "localhost" or is_ipv4:
-                rest = "client.localhost"
-            else:
-                # produção sem 'client' no host atual -> injeta client.<base_domain>
-                base_domain = ".".join(labels[-2:]) if len(labels) >= 2 else domain
-                rest = f"client.{base_domain}"
+        # label DNS-safe a partir do primeiro nome do dono
+        owner_label = slugify(self.owner.first_name or "") or "owner"
 
+        # base domain:
+        # - se for localhost ou IPv4 (ex.: 127.0.0.1), usamos 'localhost'
+        # - senão, usamos os dois últimos labels (seudominio.com)
+        is_ipv4 = (len(labels) == 4 and all(p.isdigit() for p in labels))
+        if labels[-1] == "localhost" or is_ipv4:
+            base_domain = "localhost"
+        else:
+            base_domain = ".".join(labels[-2:]) if len(labels) >= 2 else domain
+
+        rest = f"{owner_label}.{base_domain}"
         return f"{scheme}://{self.slug}.{rest}{port}{path}"
 
     def __str__(self):

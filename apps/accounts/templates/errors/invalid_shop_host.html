@@ -1,0 +1,20 @@
+{% extends 'accounts/base_public.html' %}
+{% block title %}Endereço inválido{% endblock %}
+
+{% block content %}
+<div class="py-5 text-center">
+  <h1 class="h4 mb-2">Endereço de barbearia inválido</h1>
+  <p class="text-muted mb-4">
+    O link que você acessou não corresponde a um endereço válido de barbearia.
+  </p>
+
+  {% if loja and suggested_url %}
+    <div class="alert alert-info mx-auto" style="max-width: 640px;">
+      <div class="fw-semibold">Você quis dizer:</div>
+      <div class="small text-break">{{ suggested_url }}</div>
+    </div>
+    <a class="btn btn-primary mt-2" href="{{ suggested_url }}">Ir para o endereço correto</a>
+  {% endif %}
+
+</div>
+{% endblock %}

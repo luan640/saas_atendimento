@@ -1,38 +1,159 @@
+{% load widget_tweaks %}
+
 <div class="modal-header">
   <h5 class="modal-title">{{ acao|default:"Editar funcionário" }}</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
 </div>
 
-<div class="modal-body" id="modal-funcionario-body">
-  <form method="post"
-        hx-post="{% url 'cadastro:funcionario_edit' funcionario.pk %}"
-        hx-target="#funcionarios-tbody"
-        hx-select="#funcionarios-tbody"
-        hx-include="#filtros-func"
-        hx-swap="outerHTML"
-        hx-indicator="#funcionarios-loading"
-        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFuncionarioOps')).hide(); } catch(e) {} }">
-    {% csrf_token %}
-    {{ form.as_p }}
-    {% include 'cadastro/partials/agenda_formset.html' with formset=formset %}
+<form
+  method="post"
+  hx-post="{% url 'cadastro:funcionario_edit' funcionario.pk %}"
+  hx-target="#funcionarios-tbody"
+  hx-select="#funcionarios-tbody"
+  hx-include="#filtros-func"
+  hx-swap="outerHTML"
+  hx-indicator="#btnSalvarFuncionarioEdit .spinner-border"
+  hx-disabled-elt="input,select,textarea,button"
+  id="funcionarioEditForm"
+  novalidate
+  hx-on="htmx:afterRequest:
+    if (
+      event.detail &&
+      event.detail.elt === this &&
+      (event.detail.requestConfig?.verb || '').toLowerCase() === 'post' &&
+      event.detail.xhr.status < 400
+    ) {
+      try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFuncionarioOps')).hide(); } catch(e) {}
+    }"
+>
+  {% csrf_token %}
 
-    {% if form and form.errors %}
-      <div class="alert alert-danger">
-        <strong>Erros no formulário:</strong>
-        <ul class="mb-0">
-          {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
-          {% for field in form %}
-            {% for e in field.errors %}
-              <li><strong>{{ field.label }}:</strong> {{ e }}</li>
-            {% endfor %}
-          {% endfor %}
-        </ul>
+  <div class="modal-body" id="modal-funcionario-body">
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger py-2">
+        {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
       </div>
     {% endif %}
 
-    <div class="d-flex justify-content-end gap-2">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-      <button type="submit" class="btn btn-primary">Salvar</button>
+    <div class="row g-3">
+      {# Loja #}
+      {% if form.loja %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.loja.id_for_label }}">{{ form.loja.label }}</label>
+          {% if form.loja.errors %}
+            {% render_field form.loja class+="form-select is-invalid" %}
+          {% else %}
+            {% render_field form.loja class+="form-select" %}
+          {% endif %}
+          {% for e in form.loja.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Nome #}
+      {% if form.nome %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.nome.id_for_label }}">{{ form.nome.label }}</label>
+          {% if form.nome.errors %}
+            {% render_field form.nome class+="form-control is-invalid" placeholder="Ex.: Pedro Alves" %}
+          {% else %}
+            {% render_field form.nome class+="form-control" placeholder="Ex.: Pedro Alves" %}
+          {% endif %}
+          {% for e in form.nome.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Cargo #}
+      {% if form.cargo %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.cargo.id_for_label }}">{{ form.cargo.label }}</label>
+          {% if form.cargo.errors %}
+            {% render_field form.cargo class+="form-select is-invalid" %}
+          {% else %}
+            {% render_field form.cargo class+="form-select" %}
+          {% endif %}
+          {% for e in form.cargo.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# E-mail #}
+      {% if form.email %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+          {% if form.email.errors %}
+            {% render_field form.email class+="form-control is-invalid" placeholder="exemplo@dominio.com" %}
+          {% else %}
+            {% render_field form.email class+="form-control" placeholder="exemplo@dominio.com" %}
+          {% endif %}
+          {% for e in form.email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Telefone #}
+      {% if form.telefone %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.telefone.id_for_label }}">{{ form.telefone.label }}</label>
+          {% if form.telefone.errors %}
+            {% render_field form.telefone class+="form-control is-invalid" placeholder="+5585..." %}
+          {% else %}
+            {% render_field form.telefone class+="form-control" placeholder="+5585..." %}
+          {% endif %}
+          {% for e in form.telefone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Ativo #}
+      {% if form.ativo %}
+        <div class="col-12 col-md-6 d-flex align-items-end">
+          <div class="form-check">
+            {% render_field form.ativo class+="form-check-input" %}
+            <label class="form-check-label ms-1" for="{{ form.ativo.id_for_label }}">{{ form.ativo.label }}</label>
+            {% for e in form.ativo.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {# Fallback para campos não mapeados (se algum custom aparecer) #}
+      {% for field in form %}
+        {% if not field.is_hidden and field.name not in 'loja nome cargo email telefone ativo' %}
+          <div class="col-12">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.errors %}
+              {% render_field field class+="form-control is-invalid" %}
+            {% else %}
+              {% render_field field class+="form-control" %}
+            {% endif %}
+            {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
     </div>
-  </form>
-</div>
+
+    {# Agenda semanal (formset) #}
+    {% include 'cadastro/partials/agenda_formset.html' with formset=formset %}
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary" id="btnSalvarFuncionarioEdit">
+      <span class="btn-label-text">Salvar</span>
+      <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+    </button>
+  </div>
+</form>
+
+<script>
+(function(){
+  const form = document.getElementById('funcionarioEditForm');
+  const btn  = document.getElementById('btnSalvarFuncionarioEdit');
+  if (!form || !btn) return;
+  const spin = btn.querySelector('.spinner-border');
+  const show = () => spin && spin.classList.remove('d-none');
+  const hide = () => spin && spin.classList.add('d-none');
+
+  form.addEventListener('htmx:beforeRequest', (e) => { if (e.target === form) show(); });
+  ['htmx:afterRequest','htmx:responseError','htmx:sendError','htmx:timeout'].forEach(evt => {
+    form.addEventListener(evt, (e) => { if (e.target === form) hide(); });
+  });
+})();
+</script>

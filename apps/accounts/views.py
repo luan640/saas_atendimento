@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.http import HttpResponse
 from django.db.models import Q, Sum, Count, Avg
 from django.views.decorators.http import require_POST
+from django.http import HttpRequest
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
@@ -20,6 +21,7 @@ from .utils import get_shop_slug_from_host
 import random
 import json
 from datetime import date, timedelta, time
+from calendar import Calendar
 
 # ========== HELPERS ==========
 
@@ -36,10 +38,42 @@ def _issue_otp(phone: str) -> str:
 
 # ========== OWNER ==========
 
-def home_redirect(request):
-    """Serve client start on shop subdomains; owners go to login."""
-    if get_shop_slug_from_host(request):
+def home_redirect(request: HttpRequest):
+    """
+    - Subdomínio de loja válido -> vai para fluxo do cliente
+    - Subdomínio malformado/indevido -> tela de erro 404 com sugestão do host correto, se possível
+    - Sem subdomínio -> login do dono
+    """
+    slug = get_shop_slug_from_host(request)
+    if slug:
+        # host válido: atende fluxo cliente daquela loja
+        # Se sua view client_start_loja recebe slug:
         return client_start_loja(request)
+        # Se ela mesma resolve do host, troque pela chamada sem slug:
+        # return client_start_loja(request)
+
+    # Detecta “parece subdomínio” (>=3 labels) e não é IPv4
+    host = request.get_host().split(':')[0]
+    labels = host.split('.')
+    is_ipv4 = (len(labels) == 4 and all(p.isdigit() for p in labels))
+    looks_like_subdomain = (not is_ipv4 and len(labels) >= 3)
+
+    if looks_like_subdomain:
+        # Se o 1º label é um slug de loja existente, sugerimos a URL canônica correta
+        loja = (Loja.objects
+                .select_related('owner')
+                .filter(slug=labels[0], ativa=True)
+                .first())
+        ctx = {}
+        if loja:
+            # Usa sua própria lógica para montar o host correto (com first_name do dono)
+            ctx['loja'] = loja
+            ctx['suggested_url'] = loja.get_public_url(request)
+        return render(request, 'errors/invalid_shop_host.html', ctx, status=404)
+        # Ou, se preferir:
+        # raise Http404("Endereço de barbearia inválido.")
+
+    # Base domain / sem subdomínio: manda pro login do dono
     return redirect('accounts:owner_login')
 
 def owner_login(request):
@@ -202,29 +236,59 @@ def owner_sobre(request):
 @login_required
 @subscription_required
 def owner_home_agendamentos(request):
-    if not getattr(request.user, 'is_owner', False):
-        return redirect('accounts:owner_login')
-
     lojas = request.user.lojas.order_by('nome')
-    loja_id = request.GET.get('loja_filtro') or request.GET.get('loja')
-    loja_sel = get_object_or_404(lojas, pk=loja_id) if loja_id else (lojas.first() if lojas.exists() else None)
 
-    base = Agendamento.objects.filter(loja__owner=request.user)
-    if loja_sel:
-        base = base.filter(loja=loja_sel)
+    loja_id = request.GET.get('loja_filtro') or request.session.get('loja_filtro')
+    loja = lojas.filter(id=loja_id).first() or lojas.first()
+    if loja:
+        request.session['loja_filtro'] = loja.id
 
-    # Tentamos cobrir 2 cenários: por status OU por booleano realizado
-    pendentes = base.filter(confirmado=False).order_by('criado_em')[:20]
-    realizados = base.filter(confirmado=True).order_by('-criado_em')[:20]
+    # mês/ano atuais a partir da query (?y=2025&m=9), default = hoje
+    try:
+        y = int(request.GET.get('y') or request.GET.get('year'))
+        m = int(request.GET.get('m') or request.GET.get('month'))
+        current = date(y, m, 1)
+    except Exception:
+        today = date.today()
+        current = today.replace(day=1)
+
+    cal = Calendar(firstweekday=0)  # 0 = segunda
+    weeks_dates = cal.monthdatescalendar(current.year, current.month)
+    start, end = weeks_dates[0][0], weeks_dates[-1][-1]
+
+    # Somente pendentes (nem confirmado, nem no_show) no range visível do calendário
+    pendentes_qs = (Agendamento.objects
+        .filter(loja=loja, data__range=[start, end], confirmado=False, no_show=False)
+        .select_related('funcionario', 'cliente')
+        .prefetch_related('servicos')
+        .order_by('data', 'hora'))
+
+    # Mapa por dia -> lista de pendentes
+    by_day = {}
+    for a in pendentes_qs:
+        by_day.setdefault(a.data, []).append(a)
+
+    # Matriz de semanas: [(date, [agendamentos...]), ...]
+    weeks = [[(d, by_day.get(d, [])) for d in week] for week in weeks_dates]
+
+    # prev/next mês
+    prev_first = (current.replace(day=1) - timedelta(days=1)).replace(day=1)
+    next_first = (current.replace(day=28) + timedelta(days=4)).replace(day=1)
 
     ctx = {
         'lojas': lojas,
-        'loja': loja_sel,
-        'pendentes': pendentes,
-        'realizados': realizados,
-        'total_pendentes': base.filter(confirmado=False).count(),
-        'total_realizados': base.filter(confirmado=True).count(),
+        'loja': loja,
+        'weeks': weeks,
+        'current': current,
+        'today': date.today(),
+        'prev_y': prev_first.year, 'prev_m': prev_first.month,
+        'next_y': next_first.year, 'next_m': next_first.month,
+        'total_pendentes': pendentes_qs.count(),
     }
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
+
     return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
 
 @login_required

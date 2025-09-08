@@ -146,36 +146,49 @@ class ServicoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         lojas = kwargs.pop("lojas", Loja.objects.none())
         super().__init__(*args, **kwargs)
+
         self.fields["loja"].queryset = lojas
 
-        url = reverse("cadastro:servico_form")
-        if self.instance.pk:
-            url = reverse("cadastro:servico_edit", args=[self.instance.pk])
+        editing = bool(self.instance and self.instance.pk)
 
-        self.fields["loja"].widget.attrs.update({
-            "hx-get": url,
-            "hx-target": "#modal-servico-body",
-            "hx-select": "#modal-servico-body",
-            "hx-trigger": "change",
-            "hx-swap": "outerHTML",
-            "hx-include": "this",
+        if editing:
+            # 👉 edição: não permitir trocar loja nem exigir no POST
+            self.fields["loja"].required = False
+            self.fields["loja"].disabled = True
+            self.fields["loja"].initial = self.instance.loja
+            # (opcional) remova htmx do campo, caso ele ainda seja renderizado em algum lugar
+            for attr in ("hx-get","hx-target","hx-select","hx-trigger","hx-swap","hx-include","hx-params"):
+                self.fields["loja"].widget.attrs.pop(attr, None)
 
-        })
-
-        loja_valor = self.data.get("loja") or self.initial.get("loja")
-        loja_obj = None
-        if isinstance(loja_valor, Loja):
-            loja_obj = loja_valor
-        elif loja_valor:
-            try:
-                loja_obj = lojas.get(id=int(loja_valor))
-            except (ValueError, Loja.DoesNotExist):
-                loja_obj = None
-        elif self.instance.pk:
             loja_obj = self.instance.loja
+        else:
+            # 👉 criação: loja vem do POST/initial; mantém HTMX se quiser filtrar profissionais
+            self.fields["loja"].widget.attrs.update({
+                "hx-get": reverse("cadastro:servico_form"),
+                "hx-target": "#modal-servico-body",
+                "hx-select": "#modal-servico-body",
+                "hx-trigger": "change",
+                "hx-swap": "outerHTML",
+                "hx-include": "this",
+                "hx-params": "loja",
+            })
 
+            loja_valor = self.data.get("loja") or self.initial.get("loja")
+            if isinstance(loja_valor, Loja):
+                loja_obj = loja_valor
+            elif loja_valor:
+                try:
+                    loja_obj = lojas.get(id=int(loja_valor))
+                except (ValueError, Loja.DoesNotExist):
+                    loja_obj = None
+            else:
+                loja_obj = None
+
+        # queryset dos profissionais conforme loja (edição: sempre da loja do instance)
         if loja_obj is not None:
-            self.fields["profissionais"].queryset = loja_obj.funcionarios.filter(ativo=True).order_by("nome")
+            self.fields["profissionais"].queryset = (
+                loja_obj.funcionarios.filter(ativo=True).order_by("nome")
+            )
         else:
             self.fields["profissionais"].queryset = Funcionario.objects.none()
 
@@ -205,5 +218,5 @@ FuncionarioAgendaSemanalFormSet = inlineformset_factory(
     form=FuncionarioAgendaSemanalForm,
     extra=7,
     max_num=7,
-    can_delete=True,
+    can_delete=False,
 )

@@ -1,88 +1,274 @@
+{% load widget_tweaks %}
+
+<style>
+  /* Grade compacta de serviços */
+  .service-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: .5rem;
+    max-height: 45vh;           /* limita altura da lista */
+    overflow: auto;             /* scroll interno */
+    padding-right: .25rem;
+  }
+  .service-tile{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    white-space: nowrap;
+  }
+  .service-name{
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .service-price{
+    font-variant-numeric: tabular-nums;
+  }
+  .service-toolbar{
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--bs-body-bg);
+    padding-top: .25rem;
+    padding-bottom: .5rem;
+  }
+</style>
+
 <div class="modal-header">
   <h5 class="modal-title">Finalizar atendimento</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
 </div>
-<div class="modal-body">
-  <form method="post"
-        hx-post="{% url 'appointments:finalizar_agendamento' agendamento.pk %}"
-        hx-target="#modalShell .modal-content"
-        hx-swap="innerHTML"
-        hx-include="#filtro-agendamentos"
-        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShell')).hide(); } catch(e) {} }">
-    {% csrf_token %}
 
-    {% if form.errors %}
-      <div class="alert alert-danger">
-        <strong>Erros no formulário:</strong>
-        <ul class="mb-0">
-          {% for field in form %}
-            {% for e in field.errors %}
-              <li><strong>{{ field.label }}:</strong> {{ e }}</li>
-            {% endfor %}
-          {% endfor %}
-        </ul>
+<form
+  method="post"
+  id="finalizarForm"
+  hx-post="{% url 'appointments:finalizar_agendamento' agendamento.pk %}"
+  hx-target="#modalShell .modal-content"
+  hx-swap="innerHTML"
+  hx-include="#filtro-agendamentos"
+  hx-disabled-elt="input,select,textarea,button"
+  hx-on="htmx:afterRequest:
+    if (event.detail && event.detail.elt === this && (event.detail.requestConfig?.verb || '').toLowerCase() === 'post' && event.detail.xhr.status < 400) {
+      try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalShell')).hide(); } catch(e) {}
+    }"
+>
+  {% csrf_token %}
+
+  <div class="modal-body">
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger py-2">
+        {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
       </div>
     {% endif %}
 
+    {# Serviços em grade com busca #}
     <div class="mb-3">
-      <label class="form-label">Serviços</label>
-      {% for s in form.fields.servicos.queryset %}
-        <div class="form-check">
-          <input class="form-check-input servico-checkbox" type="checkbox" name="servicos" value="{{ s.pk }}" id="servico{{ s.pk }}" data-preco="{{ s.preco }}"{% if s.pk|stringformat:'s' in form.servicos.value %} checked{% endif %}>
-          <label class="form-check-label" for="servico{{ s.pk }}">{{ s.nome }} (R$ {{ s.preco }})</label>
+      <div class="service-toolbar d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <div class="flex-grow-1" style="min-width: 220px;">
+          <input type="search" class="form-control" id="busca-servicos" placeholder="Buscar serviço...">
         </div>
-      {% endfor %}
+        <span class="badge bg-primary-subtle text-primary-emphasis" id="badge-total">Total: R$ 0,00</span>
+        <span class="badge bg-secondary-subtle text-secondary-emphasis" id="badge-count">0 selecionado(s)</span>
+      </div>
+
+      <div class="service-grid" id="lista-servicos">
+        {% for s in form.fields.servicos.queryset %}
+          {% with preco_str=s.preco|floatformat:2 selected_vals=form.servicos.value %}
+            <input
+              class="btn-check servico-checkbox"
+              type="checkbox"
+              name="servicos"
+              value="{{ s.pk }}"
+              id="svc-{{ s.pk }}"
+              data-preco="{{ preco_str }}"
+              data-nome="{{ s.nome|lower }}"
+              {% if selected_vals and s.pk|stringformat:"s" in selected_vals %}checked{% endif %}
+            >
+            <label class="btn btn-outline-primary service-tile" for="svc-{{ s.pk }}" title="{{ s.nome }}">
+              <span class="service-name">
+                <strong>{{ s.nome }}</strong>
+                {% if s.duracao_minutos %}<small class="text-muted"> • {{ s.duracao_minutos }} min</small>{% endif %}
+              </span>
+              <span class="service-price">R$ {{ preco_str }}</span>
+            </label>
+          {% endwith %}
+        {% endfor %}
+      </div>
+
+      {% if form.servicos.errors %}
+        <div class="text-danger small mt-1">
+          {% for e in form.servicos.errors %}<div>{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
     </div>
 
-    <div class="mb-3">
-      {{ form.funcionario.label_tag }}
-      {{ form.funcionario }}
+    {# Funcionário #}
+    {% if form.funcionario %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.funcionario.id_for_label }}">{{ form.funcionario.label }}</label>
+        {% if form.funcionario.errors %}
+          {% render_field form.funcionario class+="form-select is-invalid" %}
+          {% for e in form.funcionario.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        {% else %}
+          {% render_field form.funcionario class+="form-select" %}
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {# Valor final + Teve desconto? #}
+    <div class="row g-2 mb-3">
+      <div class="col-sm-7">
+        <label class="form-label" for="{{ form.valor_final.id_for_label }}">{{ form.valor_final.label }}</label>
+        {% if form.valor_final.errors %}
+          {% render_field form.valor_final class+="form-control is-invalid text-end" inputmode="decimal" %}
+          {% for e in form.valor_final.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        {% else %}
+          {% render_field form.valor_final class+="form-control text-end" inputmode="decimal" %}
+        {% endif %}
+      </div>
+      <div class="col-sm-5 d-flex align-items-end">
+        <div class="form-check form-switch ms-sm-3">
+          {% if form.teve_desconto.errors %}
+            {% render_field form.teve_desconto class+="form-check-input is-invalid" %}
+            {% for e in form.teve_desconto.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+          {% else %}
+            {% render_field form.teve_desconto class+="form-check-input" %}
+          {% endif %}
+          <label class="form-check-label ms-2" for="{{ form.teve_desconto.id_for_label }}">{{ form.teve_desconto.label }}</label>
+        </div>
+      </div>
     </div>
 
-    <div class="mb-3">
-      {{ form.valor_final.label_tag }}
-      {{ form.valor_final }}
-    </div>
+    {# Forma de pagamento #}
+    {% if form.forma_pagamento %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.forma_pagamento.id_for_label }}">{{ form.forma_pagamento.label }}</label>
+        {% if form.forma_pagamento.errors %}
+          {% render_field form.forma_pagamento class+="form-select is-invalid" %}
+          {% for e in form.forma_pagamento.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        {% else %}
+          {% render_field form.forma_pagamento class+="form-select" %}
+        {% endif %}
+      </div>
+    {% endif %}
 
-    <div class="mb-3 form-check">
-      {{ form.teve_desconto }} {{ form.teve_desconto.label_tag }}
-    </div>
+    {# Observação #}
+    {% if form.observacao %}
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.observacao.id_for_label }}">{{ form.observacao.label }}</label>
+        {% if form.observacao.errors %}
+          {% render_field form.observacao class+="form-control is-invalid" rows="3" %}
+          {% for e in form.observacao.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        {% else %}
+          {% render_field form.observacao class+="form-control" rows="3" placeholder="Desconto aplicado..." %}
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
 
-    <div class="mb-3">
-      {{ form.forma_pagamento.label_tag }}
-      {{ form.forma_pagamento }}
-    </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
 
-    <div class="mb-3">
-      {{ form.observacao.label_tag }}
-      {{ form.observacao }}
-    </div>
+    <button type="button"
+            class="btn btn-outline-danger"
+            hx-get="{% url 'appointments:marcar_no_show' agendamento.pk %}"
+            hx-target="#modalShell .modal-content"
+            hx-swap="innerHTML">
+      Não compareceu
+    </button>
 
-    <div class="d-flex justify-content-end gap-2">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-      <button type="button"
-              class="btn btn-outline-danger"
-              hx-get="{% url 'appointments:marcar_no_show' agendamento.pk %}"
-              hx-target="#modalShell .modal-content"
-              hx-swap="innerHTML">Não compareceu</button>
-      <button type="submit" class="btn btn-primary">Finalizar</button>
-    </div>
-  </form>
-</div>
+    <button type="submit" class="btn btn-primary" id="btnFinalizar">
+      <span class="btn-label-text">Finalizar</span>
+      <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+    </button>
+  </div>
+</form>
 
 <script>
-  function atualizarTotal() {
-    let total = 0;
+(function(){
+  const form      = document.getElementById('finalizarForm');
+  const badge     = document.getElementById('badge-total');
+  const badgeCnt  = document.getElementById('badge-count');
+  const valorEl   = document.getElementById('id_valor_final');
+  const desconto  = document.getElementById('id_teve_desconto');
+  const busca     = document.getElementById('busca-servicos');
+
+  function n(x){ return Number(x || 0) }
+  function parseMoneyAttr(el){ return n(el.dataset.preco) }
+  function formatBRL(num){ return num.toFixed(2).replace('.', ',') }
+
+  function calcTotal(){
+    let total = 0, count = 0;
     document.querySelectorAll('.servico-checkbox:checked').forEach(el => {
-      total += parseFloat(el.dataset.preco);
+      total += parseMoneyAttr(el);
+      count++;
     });
-    const campo = document.getElementById('id_valor_final');
-    if (campo) {
-      campo.value = total.toFixed(2);
+    return { total, count };
+  }
+
+  function refreshTotals(){
+    const { total, count } = calcTotal();
+    if (badge)    badge.textContent = 'Total: R$ ' + formatBRL(total);
+    if (badgeCnt) badgeCnt.textContent = `${count} selecionado(s)`;
+    if (valorEl && desconto && !desconto.checked){
+      valorEl.value = total.toFixed(2); // ponto p/ backend
     }
   }
+
+  function toggleValorFinalEditable(){
+    if (!valorEl || !desconto) return;
+    const editable = desconto.checked;
+    valorEl.readOnly = !editable;
+    valorEl.classList.toggle('bg-body-secondary', !editable);
+  }
+
+  // Filtro de serviços
+  function filtrarServicos(){
+    const q = (busca?.value || '').trim().toLowerCase();
+    const inputs = document.querySelectorAll('.servico-checkbox');
+    inputs.forEach(input => {
+      const nome = input.dataset.nome || '';
+      const label = document.querySelector(`label[for="${input.id}"]`);
+      const show = !q || nome.includes(q);
+      if (label){
+        label.style.display = show ? '' : 'none';
+      }
+      // o próprio input fica invisível; submissão OK porque só inputs checked contam
+    });
+  }
+
+  // Eventos
   document.querySelectorAll('.servico-checkbox').forEach(el => {
-    el.addEventListener('change', atualizarTotal);
+    el.addEventListener('change', refreshTotals);
   });
-  atualizarTotal();
+
+  if (desconto){
+    desconto.addEventListener('change', () => {
+      toggleValorFinalEditable();
+      if (!desconto.checked) refreshTotals();
+    });
+  }
+
+  if (busca){
+    busca.addEventListener('input', filtrarServicos);
+  }
+
+  // Spinner do botão
+  const btn = document.getElementById('btnFinalizar');
+  const spin = btn ? btn.querySelector('.spinner-border') : null;
+  const show = () => spin && spin.classList.remove('d-none');
+  const hide = () => spin && spin.classList.add('d-none');
+
+  if (form){
+    form.addEventListener('htmx:beforeRequest', (e) => { if (e.target === form) show(); });
+    ['htmx:afterRequest','htmx:responseError','htmx:sendError','htmx:timeout'].forEach(evt => {
+      form.addEventListener(evt, (e) => { if (e.target === form) hide(); });
+    });
+  }
+
+  // Inicialização
+  toggleValorFinalEditable();
+  refreshTotals();
+  filtrarServicos();
+})();
 </script>

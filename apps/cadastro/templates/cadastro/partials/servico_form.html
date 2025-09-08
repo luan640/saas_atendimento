@@ -12,6 +12,7 @@
   id="servicoForm"
   novalidate
   hx-on="htmx:afterRequest:
+    console.log('elt:', event.detail.elt, 'verb:', event.detail.requestConfig?.verb, 'status:', event.detail.xhr.status);
     if (
       event.detail &&
       event.detail.elt === this &&
@@ -20,7 +21,6 @@
     ) {
       try { bootstrap.Modal.getOrCreateInstance(this.closest('.modal')).hide(); } catch(e) {}
     }"
-  hx-on="htmx:afterRequest: console.log('elt:', event.detail.elt, 'verb:', event.detail.requestConfig?.verb, 'status:', event.detail.xhr.status)"
 
 >
   {% csrf_token %}
@@ -36,6 +36,18 @@
 
     {# --- Renderização “orientada” se os campos existem com esses nomes --- #}
     <div class="row g-3">
+      {# Loja (se o form expõe; muitos casos já fixam por initial) #}
+      {% if form.loja %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.loja.id_for_label }}">{{ form.loja.label }}</label>
+          {% if form.loja.errors %}
+            {% render_field form.loja class+="form-select is-invalid" %}
+          {% else %}
+            {% render_field form.loja class+="form-select" %}
+          {% endif %}
+          {% for e in form.loja.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
 
       {# Nome #}
       {% if form.nome %}
@@ -89,18 +101,6 @@
         </div>
       {% endif %}
 
-      {# Loja (se o form expõe; muitos casos já fixam por initial) #}
-      {% if form.loja %}
-        <div class="col-12 col-md-6">
-          <label class="form-label" for="{{ form.loja.id_for_label }}">{{ form.loja.label }}</label>
-          {% if form.loja.errors %}
-            {% render_field form.loja class+="form-select is-invalid" %}
-          {% else %}
-            {% render_field form.loja class+="form-select" %}
-          {% endif %}
-          {% for e in form.loja.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-        </div>
-      {% endif %}
 
       {# Profissionais (múltiplo) — chips com input DENTRO da label #}
       {% if form.profissionais %}
@@ -191,19 +191,24 @@
 
     <script>
     (function(){
-      // Escopa ao modal aberto (editar)
-      const modal = document.getElementById('modalServicoOps') || document.getElementById('modalServico');
-      if (!modal) return;
-      modal.querySelectorAll('.prof-chips label.btn').forEach(label => {
-        const input = label.querySelector('input.profissional-check');
-        if (!input) return;
-        const sync = () => label.classList.toggle('active', input.checked);
-        // Estado inicial
-        sync();
-        // Mudou? atualiza
-        input.addEventListener('change', sync);
-        // Clique em qualquer lugar do chip marca/desmarca (input está dentro, então já funciona)
-      });
+      function initProfChips(root){
+        root.querySelectorAll('.prof-chips label.btn').forEach(label => {
+          const input = label.querySelector('input.profissional-check');
+          if (!input) return;
+          const sync = () => label.classList.toggle('active', input.checked);
+          sync();
+          input.addEventListener('change', sync);
+        });
+      }
+
+      if (window.htmx) {
+        htmx.onLoad((elt) => {
+          // só o fragmento recém carregado
+          initProfChips(elt);
+        });
+      } else {
+        initProfChips(document);
+      }
     })();
     </script>
   </div>
