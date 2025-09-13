@@ -10,10 +10,10 @@ from django.utils import timezone
 from django.db.models import Sum
 
 from apps.cadastro.models import Loja, Funcionario, Servico
+from apps.accounts.views import owner_home_agendamentos
 from .models import Agendamento
 from .forms import AgendamentoDataHoraForm, FinalizarAtendimentoForm
 from .utils import gerar_slots_disponiveis
-from apps.accounts.views import owner_home_agendamentos
 
 def _inherit_htmx_query(request):
     """Copia view/d/y/m/loja_filtro do HX-Current-URL (se houver) para request.GET."""
@@ -272,7 +272,7 @@ def finalizar_agendamento(request, pk):
             resp["HX-Retarget"] = "#agendamentos-section"
             resp["HX-Reswap"]   = "outerHTML"
             resp["HX-Trigger"]  = json.dumps({
-                "show-toast": {"text": "Agendamento finalizado com sucesso!", "level": "success"}
+                "show-toast": {"text": "Atendimento finalizado com sucesso!", "level": "success"}
             })
             return resp
 

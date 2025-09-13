@@ -238,38 +238,30 @@ def owner_sobre(request):
 def owner_home_agendamentos(request):
     lojas = request.user.lojas.order_by('nome')
 
-    # aceita valor de loja via GET (navegação) ou POST (submissões HTMX) ou sessão
-    loja_id = (
-        request.GET.get('loja_filtro')
-        or request.POST.get('loja_filtro')
-        or request.session.get('loja_filtro')
-    )
+    # loja via GET/POST/sessão (mantém como já estava)
+    loja_id = (request.GET.get('loja_filtro') or request.POST.get('loja_filtro') or request.session.get('loja_filtro'))
     loja = lojas.filter(id=loja_id).first() or lojas.first()
     if loja:
         request.session['loja_filtro'] = loja.id
 
-    # modo de visualização: 'month' (padrão) ou 'day'
-    view_mode = (request.GET.get('view') or request.POST.get('view') or 'month').lower()
+    # --- preferências de visualização (persistência em sessão) ---
+    view_mode = (request.GET.get('view') or request.POST.get('view') or request.session.get('ag_view_mode') or 'month').lower()
+    request.session['ag_view_mode'] = view_mode
 
-    # ---------- MODO DIA ----------
     if view_mode == 'day':
-        d_str = request.GET.get('d') or request.POST.get('d')
+        # dia preferido: GET/POST/sessão -> fallback hoje
+        d_str = request.GET.get('d') or request.POST.get('d') or request.session.get('ag_view_day')
         try:
-            day = date.fromisoformat(d_str) if d_str else date.today()
-        except ValueError:
-            day = date.today()
+            day = date.fromisoformat(d_str) if d_str else timezone.localdate()
+        except Exception:
+            day = timezone.localdate()
+        request.session['ag_view_day'] = day.isoformat()
 
-        # pendentes do DIA selecionado
-        day_qs = (
-            Agendamento.objects
-            .filter(loja=loja, data=day, confirmado=False, no_show=False)
-            .select_related('funcionario', 'cliente')
-            .prefetch_related('servicos')
-            .order_by('hora', 'funcionario__nome')
-        )
-
-        # current = primeiro dia do mês do "day" (usado no toggle para voltar ao mês)
-        current = day.replace(day=1)
+        qs = (Agendamento.objects
+              .filter(loja=loja, data=day, confirmado=False, no_show=False)
+              .select_related('funcionario','cliente')
+              .prefetch_related('servicos')
+              .order_by('hora','funcionario__nome'))
 
         ctx = {
             'lojas': lojas,
@@ -278,46 +270,42 @@ def owner_home_agendamentos(request):
             'day': day,
             'day_prev': day - timedelta(days=1),
             'day_next': day + timedelta(days=1),
-            'day_items': day_qs,
-            'today': date.today(),
-            'current': current,  # para link do botão "Mês"
-            'total_pendentes': day_qs.count(),
+            'day_items': qs,
+            'today': timezone.localdate(),
+            # para o botão "Mês" voltar ao mês do dia atual:
+            'current': day.replace(day=1),
+            'total_pendentes': qs.count(),
         }
-
         return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
 
-    # ---------- MODO MENSAL (padrão) ----------
-    # mês/ano atuais a partir da query (?y=2025&m=9), default = hoje
+    # ---- modo mensal (default) ----
     try:
-        y = int((request.GET.get('y') or request.POST.get('y') or request.GET.get('year') or request.POST.get('year') or 0))
-        m = int((request.GET.get('m') or request.POST.get('m') or request.GET.get('month') or request.POST.get('month') or 0))
-        current = date(y, m, 1)
+        y = int(request.GET.get('y') or request.POST.get('y') or request.session.get('ag_y') or 0)
+        m = int(request.GET.get('m') or request.POST.get('m') or request.session.get('ag_m') or 0)
+        current = date(y, m, 1) if (y and m) else timezone.localdate().replace(day=1)
     except Exception:
-        today = date.today()
-        current = today.replace(day=1)
+        current = timezone.localdate().replace(day=1)
+
+    # salva mês na sessão (para F5)
+    request.session['ag_y'] = current.year
+    request.session['ag_m'] = current.month
 
     cal = Calendar(firstweekday=0)  # 0 = segunda
     weeks_dates = cal.monthdatescalendar(current.year, current.month)
     start, end = weeks_dates[0][0], weeks_dates[-1][-1]
 
-    # Somente pendentes (nem confirmado, nem no_show) no range visível do calendário
-    pendentes_qs = (
-        Agendamento.objects
+    pendentes_qs = (Agendamento.objects
         .filter(loja=loja, data__range=[start, end], confirmado=False, no_show=False)
-        .select_related('funcionario', 'cliente')
+        .select_related('funcionario','cliente')
         .prefetch_related('servicos')
-        .order_by('data', 'hora')
-    )
+        .order_by('data','hora'))
 
-    # Mapa por dia -> lista de pendentes
     by_day = {}
     for a in pendentes_qs:
         by_day.setdefault(a.data, []).append(a)
 
-    # Matriz de semanas: [(date, [agendamentos...]), ...]
     weeks = [[(d, by_day.get(d, [])) for d in week] for week in weeks_dates]
 
-    # prev/next mês
     prev_first = (current.replace(day=1) - timedelta(days=1)).replace(day=1)
     next_first = (current.replace(day=28) + timedelta(days=4)).replace(day=1)
 
@@ -327,12 +315,11 @@ def owner_home_agendamentos(request):
         'view_mode': 'month',
         'weeks': weeks,
         'current': current,
-        'today': date.today(),
+        'today': timezone.localdate(),
         'prev_y': prev_first.year, 'prev_m': prev_first.month,
         'next_y': next_first.year, 'next_m': next_first.month,
         'total_pendentes': pendentes_qs.count(),
     }
-
     return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
 
 @login_required
