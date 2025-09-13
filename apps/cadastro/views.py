@@ -259,6 +259,8 @@ def funcionarios(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
 
+    COLOR_PRESETS = ['#E74C3C','#E67E22','#F1C40F','#2ECC71','#1ABC9C','#3498DB','#9B59B6','#34495E','#95A5A6','#E91E63']
+
     def _with_public_urls(lojas_qs):
         lojas_list = list(lojas_qs)
         for l in lojas_list:
@@ -298,7 +300,7 @@ def funcionarios(request):
             form = FuncionarioForm(lojas=lojas_qs, initial={'loja': loja})
             novo_inst = Funcionario(loja=loja)
             formset = _agenda_formset(novo_inst)
-            ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
+            ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs, 'color_presets': COLOR_PRESETS,}
             
             if request.headers.get('HX-Request') and target != 'content':
                 response = render(request, 'cadastro/partials/funcionarios.html', ctx)
@@ -336,7 +338,7 @@ def funcionarios(request):
     inst = Funcionario(loja=loja)
     formset = _agenda_formset(inst)
     qs = loja.funcionarios.order_by('nome')
-    ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs}
+    ctx = {'lojas': lojas_qs, 'loja': loja, 'form': form, 'formset': formset, 'funcionarios': qs, 'color_presets': COLOR_PRESETS}
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'cadastro/partials/funcionarios.html', ctx)
     return render(request, 'cadastro/funcionarios.html', ctx)

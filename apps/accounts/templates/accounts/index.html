@@ -11,6 +11,14 @@
 
   <link rel="shortcut icon" type="image/png" href="{% static 'images/logos/favicon.png' %}" />
   <link rel="stylesheet" href="{% static 'css/styles.min.css' %}">
+  
+  <style>
+    .service-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.5rem;max-height:45vh;overflow:auto;padding-right:.25rem}
+    .service-tile{display:flex;align-items:center;justify-content:space-between;gap:.5rem;white-space:nowrap}
+    .service-name{overflow:hidden;text-overflow:ellipsis}
+    .service-price{font-variant-numeric:tabular-nums}
+    .service-toolbar{position:sticky;top:0;z-index:1;background:var(--bs-body-bg);padding:.25rem 0 .5rem}
+  </style>
 
 </head>
 
@@ -80,23 +88,6 @@
                 hx-push-url="true">
                 <i class="ti ti-chart-bar"></i>
                 <span class="hide-menu">Relatórios</span>
-              </a>
-            </li>
-            <!-- ---------------------------------- -->
-            <!-- Sobre -->
-            <!-- ---------------------------------- -->
-            <li class="sidebar-item">
-              <a
-                aria-expanded="false"
-                class="sidebar-link"
-                href="{% url 'accounts:owner_sobre' %}"
-                hx-get="{% url 'accounts:owner_sobre' %}"
-                hx-target="#content"
-                hx-select="#content"
-                hx-swap="outerHTML"
-                hx-push-url="true">
-                <i class="ti ti-atom"></i>
-                <span class="hide-menu">Sobre</span>
               </a>
             </li>
             <!-- ---------------------------------- -->
@@ -217,17 +208,17 @@
                 </a>
                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-animate-up" aria-labelledby="drop2">
                   <div class="message-body">
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
+                    <a
+                      aria-expanded="false"
+                      class="d-flex align-items-center gap-2 dropdown-item"
+                      href="{% url 'accounts:owner_sobre' %}"
+                      hx-get="{% url 'accounts:owner_sobre' %}"
+                      hx-target="#content"
+                      hx-select="#content"
+                      hx-swap="outerHTML"
+                      hx-push-url="true">
                       <i class="ti ti-user fs-6"></i>
-                      <p class="mb-0 fs-3">My Profile</p>
-                    </a>
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-mail fs-6"></i>
-                      <p class="mb-0 fs-3">My Account</p>
-                    </a>
-                    <a href="javascript:void(0)" class="d-flex align-items-center gap-2 dropdown-item">
-                      <i class="ti ti-list-check fs-6"></i>
-                      <p class="mb-0 fs-3">My Task</p>
+                      <p class="mb-0 fs-3">Perfil</p>
                     </a>
                     <a href="{% url 'accounts:owner_logout' %}" class="btn btn-outline-primary mx-3 mt-2 d-block">Logout</a>
                   </div>

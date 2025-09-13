@@ -6,13 +6,34 @@ from django.core.validators import MinValueValidator, RegexValidator
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 
+import datetime as dt
+
 User = settings.AUTH_USER_MODEL
 
 # ----- Lojas -------
 
+class Semana(models.IntegerChoices):
+    SEGUNDA = 0, "Segunda"
+    TERCA   = 1, "Terça"
+    QUARTA  = 2, "Quarta"
+    QUINTA  = 3, "Quinta"
+    SEXTA   = 4, "Sexta"
+    SABADO  = 5, "Sábado"
+    DOMINGO = 6, "Domingo"
+
+class FormaPagamento(models.Model):
+    codigo = models.CharField(max_length=40, unique=True)
+    nome   = models.CharField(max_length=60)
+
+    class Meta:
+        ordering = ["nome"]
+
+    def __str__(self):
+        return self.nome
+
 class Loja(models.Model):
     owner = models.ForeignKey(
-        User,
+        "accounts.User",
         on_delete=models.CASCADE,
         related_name='lojas',
         limit_choices_to={'is_owner': True}
@@ -23,6 +44,11 @@ class Loja(models.Model):
     endereco = models.CharField(max_length=200, blank=True)
     ativa = models.BooleanField(default=True)
     criada_em = models.DateTimeField(auto_now_add=True)
+
+    # NOVO: formas de pagamento aceitas
+    pagamentos_aceitos = models.ManyToManyField(
+        FormaPagamento, blank=True, related_name="lojas"
+    )
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -40,17 +66,14 @@ class Loja(models.Model):
 
     def get_public_url(self, request=None):
         """
-        Monta URLs do tipo:
-        - DEV:
-          http://<slug>.<first_name>.localhost:PORT<path>
-        - PROD:
-          https://<slug>.<first_name>.<base_domain><path>
+        DEV:  http://<slug>.<first_name>.localhost:PORT<path>
+        PROD: https://<slug>.<first_name>.<base_domain><path>
         """
         path = self.get_public_path()
         if not request:
             return path
 
-        host_full = request.get_host()  # pode vir com porta
+        host_full = request.get_host()
         if ":" in host_full:
             domain, port = host_full.split(":", 1)
             port = f":{port}"
@@ -60,12 +83,8 @@ class Loja(models.Model):
         labels = domain.split(".")
         scheme = "https" if request.is_secure() else "http"
 
-        # label DNS-safe a partir do primeiro nome do dono
         owner_label = slugify(self.owner.first_name or "") or "owner"
 
-        # base domain:
-        # - se for localhost ou IPv4 (ex.: 127.0.0.1), usamos 'localhost'
-        # - senão, usamos os dois últimos labels (seudominio.com)
         is_ipv4 = (len(labels) == 4 and all(p.isdigit() for p in labels))
         if labels[-1] == "localhost" or is_ipv4:
             base_domain = "localhost"
@@ -75,8 +94,67 @@ class Loja(models.Model):
         rest = f"{owner_label}.{base_domain}"
         return f"{scheme}://{self.slug}.{rest}{port}{path}"
 
+    # Helpers de horário
+    def horario_do_dia(self, weekday: int):
+        return self.horarios.filter(weekday=weekday).first()
+
+    def aberto_agora(self, agora: dt.datetime | None = None) -> bool:
+        """
+        Retorna True se a loja estiver aberta agora (considerando intervalo de almoço).
+        """
+        agora = agora or datetime.now()
+        h = self.horario_do_dia(agora.weekday())
+        if not h or not h.aberto:
+            return False
+
+        def dentro(janela: tuple[time | None, time | None]) -> bool:
+            ini, fim = janela
+            if not ini or not fim:
+                return False
+            return ini <= agora.time() < fim
+
+        # Aberto entre inicio-fim, exceto se dentro do almoço
+        if dentro((h.inicio, h.fim)):
+            if h.almoco_inicio and h.almoco_fim:
+                return not dentro((h.almoco_inicio, h.almoco_fim))
+            return True
+        return False
+
     def __str__(self):
         return f"{self.nome} ({self.owner.email})"
+
+
+class LojaHorario(models.Model):
+    loja = models.ForeignKey(
+        Loja, on_delete=models.CASCADE, related_name="horarios"
+    )
+    weekday = models.PositiveSmallIntegerField(choices=Semana.choices)
+    aberto = models.BooleanField(default=True)
+
+    inicio = models.TimeField(null=True, blank=True)
+    fim = models.TimeField(null=True, blank=True)
+    almoco_inicio = models.TimeField(null=True, blank=True)
+    almoco_fim = models.TimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [("loja", "weekday")]
+        ordering = ["weekday"]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.aberto:
+            if not self.inicio or not self.fim:
+                raise ValidationError("Defina horário de início e fim para dias abertos.")
+            if self.inicio >= self.fim:
+                raise ValidationError("Horário de início deve ser antes do fim.")
+            if (self.almoco_inicio and not self.almoco_fim) or (self.almoco_fim and not self.almoco_inicio):
+                raise ValidationError("Preencha ambos os horários de almoço ou deixe ambos em branco.")
+            if self.almoco_inicio and self.almoco_fim:
+                if not (self.inicio < self.almoco_inicio < self.almoco_fim < self.fim):
+                    raise ValidationError("O almoço deve estar dentro do horário de trabalho.")
+
+    def __str__(self):
+        return f"{self.get_weekday_display()} - {'Aberto' if self.aberto else 'Fechado'}"
 
 # --- Funcionários ---
 
@@ -102,6 +180,8 @@ class Funcionario(models.Model):
     telefone = models.CharField(max_length=17, blank=True, null=True, validators=[phone_regex])
     slug = models.SlugField(max_length=160, blank=True)
     ativo = models.BooleanField(default=True)
+    cor_hex = models.CharField(max_length=7, default='#000000', help_text='Cor para exibir no calendário (ex.: #FF0000)')    
+
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 

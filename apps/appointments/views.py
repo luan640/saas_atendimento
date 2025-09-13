@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, timedelta
+from calendar import Calendar
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
@@ -191,27 +192,58 @@ def finalizar_agendamento(request, pk):
             ag.save()
             form.save_m2m()
 
+            # Re-renderiza o calendário preservando loja e mês/ano atuais
             lojas = request.user.lojas.order_by("nome")
             loja_id = request.POST.get("loja_filtro") or request.POST.get("loja")
-            loja_sel = (
+            loja = (
                 get_object_or_404(lojas, pk=loja_id)
                 if loja_id
                 else (lojas.first() if lojas.exists() else None)
             )
-            base = Agendamento.objects.filter(loja__owner=request.user)
-            if loja_sel:
-                base = base.filter(loja=loja_sel)
+
+            # Determina mês/ano exibidos (enviados como hidden no filtro)
+            try:
+                y = int(request.POST.get("y") or request.POST.get("year") or 0)
+                m = int(request.POST.get("m") or request.POST.get("month") or 0)
+                current = date(y, m, 1)
+            except Exception:
+                today = date.today()
+                current = today.replace(day=1)
+
+            cal = Calendar(firstweekday=0)
+            weeks_dates = cal.monthdatescalendar(current.year, current.month)
+            start, end = weeks_dates[0][0], weeks_dates[-1][-1]
+
+            pendentes_qs = (
+                Agendamento.objects
+                .filter(loja=loja, data__range=[start, end], confirmado=False, no_show=False)
+                .select_related("funcionario", "cliente")
+                .prefetch_related("servicos")
+                .order_by("data", "hora")
+            )
+
+            by_day = {}
+            for a in pendentes_qs:
+                by_day.setdefault(a.data, []).append(a)
+
+            weeks = [[(d, by_day.get(d, [])) for d in week] for week in weeks_dates]
+
+            prev_first = (current.replace(day=1) - timedelta(days=1)).replace(day=1)
+            next_first = (current.replace(day=28) + timedelta(days=4)).replace(day=1)
+
             ctx = {
                 "lojas": lojas,
-                "loja": loja_sel,
-                "pendentes": base.filter(confirmado=False).order_by("criado_em")[:20],
-                "realizados": base.filter(confirmado=True).order_by("-criado_em")[:20],
-                "total_pendentes": base.filter(confirmado=False).count(),
-                "total_realizados": base.filter(confirmado=True).count(),
+                "loja": loja,
+                "weeks": weeks,
+                "current": current,
+                "today": date.today(),
+                "prev_y": prev_first.year,
+                "prev_m": prev_first.month,
+                "next_y": next_first.year,
+                "next_m": next_first.month,
+                "total_pendentes": pendentes_qs.count(),
             }
-            response = render(
-                request, "accounts/partials/owner_home_agendamentos.html", ctx
-            )
+            response = render(request, "accounts/partials/owner_home_agendamentos.html", ctx)
             response["HX-Retarget"] = "#agendamentos-section"
             response["HX-Reswap"] = "outerHTML"
             return response
@@ -228,7 +260,6 @@ def finalizar_agendamento(request, pk):
         status=400 if request.method == "POST" else 200,
     )
 
-
 @login_required
 def marcar_no_show(request, pk):
     agendamento = get_object_or_404(Agendamento, pk=pk, loja__owner=request.user)
@@ -240,27 +271,57 @@ def marcar_no_show(request, pk):
         agendamento.valor_final = 0
         agendamento.save(update_fields=["confirmado", "no_show", "finalizado_em", "valor_final"])
 
+        # Re-renderiza o calendário preservando loja e mês/ano atuais
         lojas = request.user.lojas.order_by("nome")
         loja_id = request.POST.get("loja_filtro") or request.POST.get("loja")
-        loja_sel = (
+        loja = (
             get_object_or_404(lojas, pk=loja_id)
             if loja_id
             else (lojas.first() if lojas.exists() else None)
         )
-        base = Agendamento.objects.filter(loja__owner=request.user)
-        if loja_sel:
-            base = base.filter(loja=loja_sel)
+
+        try:
+            y = int(request.POST.get("y") or request.POST.get("year") or 0)
+            m = int(request.POST.get("m") or request.POST.get("month") or 0)
+            current = date(y, m, 1)
+        except Exception:
+            today = date.today()
+            current = today.replace(day=1)
+
+        cal = Calendar(firstweekday=0)
+        weeks_dates = cal.monthdatescalendar(current.year, current.month)
+        start, end = weeks_dates[0][0], weeks_dates[-1][-1]
+
+        pendentes_qs = (
+            Agendamento.objects
+            .filter(loja=loja, data__range=[start, end], confirmado=False, no_show=False)
+            .select_related("funcionario", "cliente")
+            .prefetch_related("servicos")
+            .order_by("data", "hora")
+        )
+
+        by_day = {}
+        for a in pendentes_qs:
+            by_day.setdefault(a.data, []).append(a)
+
+        weeks = [[(d, by_day.get(d, [])) for d in week] for week in weeks_dates]
+
+        prev_first = (current.replace(day=1) - timedelta(days=1)).replace(day=1)
+        next_first = (current.replace(day=28) + timedelta(days=4)).replace(day=1)
+
         ctx = {
             "lojas": lojas,
-            "loja": loja_sel,
-            "pendentes": base.filter(confirmado=False).order_by("criado_em")[:20],
-            "realizados": base.filter(confirmado=True).order_by("-criado_em")[:20],
-            "total_pendentes": base.filter(confirmado=False).count(),
-            "total_realizados": base.filter(confirmado=True).count(),
+            "loja": loja,
+            "weeks": weeks,
+            "current": current,
+            "today": date.today(),
+            "prev_y": prev_first.year,
+            "prev_m": prev_first.month,
+            "next_y": next_first.year,
+            "next_m": next_first.month,
+            "total_pendentes": pendentes_qs.count(),
         }
-        response = render(
-            request, "accounts/partials/owner_home_agendamentos.html", ctx
-        )
+        response = render(request, "accounts/partials/owner_home_agendamentos.html", ctx)
         response["HX-Retarget"] = "#agendamentos-section"
         response["HX-Reswap"] = "outerHTML"
         return response

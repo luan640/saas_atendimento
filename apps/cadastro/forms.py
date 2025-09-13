@@ -1,14 +1,34 @@
 from django import forms
 from django.urls import reverse
 from django.forms import inlineformset_factory
-from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal
+
+from .models import Loja, Funcionario, Servico, FuncionarioAgendaSemanal, LojaHorario, FormaPagamento, Semana
 from apps.accounts.models import Plan, PlanInfo, User
 
+import re
+
+HEX_RE = re.compile(r'^#([0-9A-Fa-f]{6})$')
+
+# ====== Loja =======
 
 class LojaForm(forms.ModelForm):
+
+    pagamentos_aceitos = forms.ModelMultipleChoiceField(
+        queryset=FormaPagamento.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="Formas de pagamento aceitas",
+    )
+
     class Meta:
         model = Loja
-        fields = ['nome', 'telefone', 'endereco', 'ativa']
+        fields = ["nome", "telefone", "endereco", "ativa", "pagamentos_aceitos"]
+        labels = {
+            "nome": "Nome da loja",
+            "telefone": "Telefone",
+            "endereco": "Endereço",
+            "ativa": "Ativa?",
+        }
 
     def __init__(self, *args, **kwargs):
         # receba o usuário que está criando
@@ -50,6 +70,41 @@ class LojaForm(forms.ModelForm):
 
         return cleaned
 
+class LojaHorarioForm(forms.ModelForm):
+    inicio = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
+    fim = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
+    almoco_inicio = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
+    almoco_fim = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
+
+    class Meta:
+        model = LojaHorario
+        fields = ["weekday", "aberto", "inicio", "fim", "almoco_inicio", "almoco_fim"]
+        labels = {
+            "weekday": "Dia",
+            "aberto": "Aberto?",
+            "inicio": "Início",
+            "fim": "Fim",
+            "almoco_inicio": "Almoço início",
+            "almoco_fim": "Almoço fim",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Deixa o dia fixo na UI (somente leitura) e mantém o valor via hidden
+        self.fields["weekday"].widget = forms.HiddenInput()
+
+LojaHorarioFormSet = inlineformset_factory(
+    Loja,
+    LojaHorario,
+    form=LojaHorarioForm,
+    extra=0,
+    can_delete=False,
+    min_num=7,
+    validate_min=True,
+    max_num=7,
+)
+
+# ====== Cliente =======
 
 class ClienteForm(forms.ModelForm):
     class Meta:
@@ -75,48 +130,8 @@ class ClienteForm(forms.ModelForm):
             user.save()
         return user
 
-class FuncionarioForm(forms.ModelForm):
-    loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
 
-    class Meta:
-        model = Funcionario
-        fields = ["loja", "nome", "cargo", "email", "telefone", "ativo"]
-        labels = {
-            "nome": "Nome",
-            "cargo": "Cargo",
-            "email": "E-mail",
-            "telefone": "Telefone",
-            "ativo": "Ativo?",
-            "loja": "Loja",
-        }
-        widgets = {
-            "nome": forms.TextInput(attrs={"placeholder": "Ex.: Pedro Alves"}),
-            "email": forms.EmailInput(attrs={"placeholder": "exemplo@dominio.com"}),
-            "telefone": forms.TextInput(attrs={"placeholder": "+5585..."}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        lojas = kwargs.pop("lojas", Loja.objects.none())
-        super().__init__(*args, **kwargs)
-        self.fields["loja"].queryset = lojas
-
-    def clean(self):
-        cleaned_data = super().clean()
-
-        loja = cleaned_data.get("loja")
-        if not self.instance.pk and loja:
-            owner = loja.owner
-            if hasattr(owner, "subscription"):
-                plano_atual = owner.subscription.plan
-                limites = PlanInfo.objects.get(plan=plano_atual)
-
-                qtd_funcionarios = loja.funcionarios.count()
-                if qtd_funcionarios >= limites.max_funcionarios:
-                    raise forms.ValidationError(
-                        f"O plano atual permite no máximo {limites.max_funcionarios} funcionário(s) por loja."
-                    )
-
-        return cleaned_data
+# ====== Serviço =======
 
 class ServicoForm(forms.ModelForm):
     loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
@@ -192,6 +207,72 @@ class ServicoForm(forms.ModelForm):
         else:
             self.fields["profissionais"].queryset = Funcionario.objects.none()
 
+# ====== Funcionário =======
+
+class FuncionarioForm(forms.ModelForm):
+    loja = forms.ModelChoiceField(queryset=Loja.objects.none(), label="Loja")
+
+    class Meta:
+        model = Funcionario
+        fields = ["loja", "nome", "cargo", "email", "telefone", "cor_hex", "ativo"]
+        labels = {
+            "nome": "Nome",
+            "cargo": "Cargo",
+            "email": "E-mail",
+            "telefone": "Telefone",
+            "cor_hex": "Cor no calendário",
+            "ativo": "Ativo?",
+            "loja": "Loja",
+        }
+        widgets = {
+            "nome": forms.TextInput(attrs={"placeholder": "Ex.: Pedro Alves"}),
+            "email": forms.EmailInput(attrs={"placeholder": "exemplo@dominio.com"}),
+            "telefone": forms.TextInput(attrs={"placeholder": "+5585..."}),
+            # Bootstrap 5: form-control-color + type=color
+            "cor_hex": forms.TextInput(attrs={
+                "type": "color",
+                "class": "form-control form-control-color",
+                "title": "Escolha uma cor",
+                "style": "width:3rem; padding:0;"
+            }),
+
+        }
+
+    def __init__(self, *args, **kwargs):
+        lojas = kwargs.pop("lojas", Loja.objects.none())
+        super().__init__(*args, **kwargs)
+        self.fields["loja"].queryset = lojas
+        # default se vier vazio na criação
+        if not self.initial.get("cor_hex"):
+            self.initial["cor_hex"] = self.instance.cor_hex or "#1E90FF"
+
+    def clean_cor_hex(self):
+        value = (self.cleaned_data.get("cor_hex") or "").strip()
+        # aceita sem # e corrige
+        if value and not value.startswith("#"):
+            value = f"#{value}"
+        if not HEX_RE.match(value or ""):
+            raise forms.ValidationError("Informe uma cor em hexadecimal no formato #RRGGBB.")
+        return value
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        loja = cleaned_data.get("loja")
+        if not self.instance.pk and loja:
+            owner = loja.owner
+            if hasattr(owner, "subscription"):
+                plano_atual = owner.subscription.plan
+                limites = PlanInfo.objects.get(plan=plano_atual)
+
+                qtd_funcionarios = loja.funcionarios.count()
+                if qtd_funcionarios >= limites.max_funcionarios:
+                    raise forms.ValidationError(
+                        f"O plano atual permite no máximo {limites.max_funcionarios} funcionário(s) por loja."
+                    )
+
+        return cleaned_data
+
 class FuncionarioAgendaSemanalForm(forms.ModelForm):
     inicio = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
     fim = forms.TimeField(required=False, widget=forms.TimeInput(attrs={"type": "time"}))
@@ -210,7 +291,6 @@ class FuncionarioAgendaSemanalForm(forms.ModelForm):
             "ativo",
             "slot_interval_minutes",
         ]
-
 
 FuncionarioAgendaSemanalFormSet = inlineformset_factory(
     Funcionario,

@@ -14,3 +14,7 @@ class ServicoAdmin(admin.ModelAdmin):
     search_fields = ("nome", "slug", "descricao", "loja__nome")
     filter_horizontal = ("profissionais",)
 
+@admin.register(Funcionario)
+class FuncionarioAdmin(admin.ModelAdmin):
+    list_display = ("loja__nome", "nome", "cargo", "email")
+

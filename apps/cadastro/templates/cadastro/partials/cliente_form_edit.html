@@ -1,32 +1,127 @@
+{# apps/cadastro/templates/cadastro/partials/cliente_form_edit.html #}
+{% load widget_tweaks %}
+
 <div class="modal-header">
   <h5 class="modal-title">{{ acao|default:"Editar cliente" }}</h5>
   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
 </div>
-<div class="modal-body">
-  <form method="post"
-        hx-post="{% url 'cadastro:cliente_edit' cliente.pk %}"
-        hx-target="#clientes-tbody"
-        hx-select="#clientes-tbody"
-        hx-swap="outerHTML"
-        hx-on="htmx:afterRequest: if (event.detail.xhr.status < 400) { try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalClienteOps')).hide(); } catch(e) {} }">
-    {% csrf_token %}
-    {{ form.as_p }}
-    {% if form and form.errors %}
-      <div class="alert alert-danger">
-        <strong>Erros no formulário:</strong>
-        <ul class="mb-0">
-          {% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}
-          {% for field in form %}
-            {% for e in field.errors %}
-              <li><strong>{{ field.label }}:</strong> {{ e }}</li>
-            {% endfor %}
-          {% endfor %}
-        </ul>
+
+<form
+  method="post"
+  hx-post="{% url 'cadastro:cliente_edit' cliente.pk %}"
+  hx-target="#clientes-tbody"
+  hx-select="#clientes-tbody"
+  hx-swap="outerHTML"
+  hx-indicator="#btnSalvarClienteEdit .spinner-border"
+  hx-disabled-elt="input,select,textarea,button"
+  id="clienteEditForm"
+  novalidate
+  hx-on="htmx:afterRequest:
+    if (
+      event.detail &&
+      event.detail.elt === this &&
+      (event.detail.requestConfig?.verb || '').toLowerCase() === 'post' &&
+      event.detail.xhr.status < 400
+    ) {
+      try { bootstrap.Modal.getOrCreateInstance(document.getElementById('modalClienteOps')).hide(); } catch(e) {}
+    }"
+>
+  {% csrf_token %}
+
+  <div class="modal-body">
+
+    {# Erros gerais #}
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger py-2" role="alert">
+        {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
       </div>
     {% endif %}
-    <div class="d-flex justify-content-end gap-2">
-      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-      <button type="submit" class="btn btn-primary">Salvar</button>
+
+    <div class="row g-3">
+
+      {# Nome completo (se existir) #}
+      {% if form.full_name %}
+        <div class="col-12 col-md-8">
+          <label class="form-label" for="{{ form.full_name.id_for_label }}">{{ form.full_name.label|default:"Nome" }}</label>
+          {% if form.full_name.errors %}
+            {% render_field form.full_name class+="form-control is-invalid" placeholder="Ex.: Maria Souza" %}
+          {% else %}
+            {% render_field form.full_name class+="form-control" placeholder="Ex.: Maria Souza" %}
+          {% endif %}
+          {% for e in form.full_name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Telefone (se existir) #}
+      {% if form.phone %}
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="{{ form.phone.id_for_label }}">{{ form.phone.label|default:"Telefone" }}</label>
+          {% if form.phone.errors %}
+            {% render_field form.phone class+="form-control is-invalid" placeholder="+5585..." %}
+          {% else %}
+            {% render_field form.phone class+="form-control" placeholder="+5585..." %}
+          {% endif %}
+          {% for e in form.phone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# E-mail (se existir) #}
+      {% if form.email %}
+        <div class="col-12 col-md-6">
+          <label class="form-label" for="{{ form.email.id_for_label }}">{{ form.email.label|default:"E-mail" }}</label>
+          {% if form.email.errors %}
+            {% render_field form.email class+="form-control is-invalid" placeholder="exemplo@dominio.com" %}
+          {% else %}
+            {% render_field form.email class+="form-control" placeholder="exemplo@dominio.com" %}
+          {% endif %}
+          {% for e in form.email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      {# Qualquer outro campo que seu form exponha #}
+      {% for field in form %}
+        {% if not field.is_hidden and field.name not in 'full_name phone email' %}
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {% if field.errors %}
+              {% render_field field class+="form-control is-invalid" %}
+            {% else %}
+              {% render_field field class+="form-control" %}
+            {% endif %}
+            {% for e in field.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      {# Campos ocultos #}
+      {% for field in form %}
+        {% if field.is_hidden %}{{ field }}{% endif %}
+      {% endfor %}
+
     </div>
-  </form>
-</div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="submit" class="btn btn-primary" id="btnSalvarClienteEdit">
+      <span class="btn-label-text">Salvar</span>
+      <span class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+    </button>
+  </div>
+</form>
+
+<script>
+(function(){
+  const form = document.getElementById('clienteEditForm');
+  const btn  = document.getElementById('btnSalvarClienteEdit');
+  if (!form || !btn) return;
+  const spin = btn.querySelector('.spinner-border');
+  const show = () => spin && spin.classList.remove('d-none');
+  const hide = () => spin && spin.classList.add('d-none');
+
+  form.addEventListener('htmx:beforeRequest', (e) => { if (e.target === form) show(); });
+  ['htmx:afterRequest','htmx:responseError','htmx:sendError','htmx:timeout'].forEach(evt => {
+    form.addEventListener(evt, (e) => { if (e.target === form) hide(); });
+  });
+})();
+</script>

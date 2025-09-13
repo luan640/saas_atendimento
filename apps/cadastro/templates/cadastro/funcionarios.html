@@ -39,7 +39,6 @@
 <div id="funcionarios-loading" class="htmx-indicator mt-2">Carregando...</div>
 
 <!-- Modal add funcionario -->
-<!-- Modal add funcionario -->
 <div class="modal fade" id="modalFuncionario" tabindex="-1" aria-labelledby="modalFuncionarioLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -144,6 +143,67 @@
                 {% for e in form.telefone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
               </div>
             {% endif %}
+
+            {# Cor no calendário #}
+            {% if form.cor_hex %}
+              <div class="col-12 col-md-6">
+                <label class="form-label" for="{{ form.cor_hex.id_for_label }}">{{ form.cor_hex.label }}</label>
+
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  {# input nativo (type=color) #}
+                  {% if form.cor_hex.errors %}
+                    {% render_field form.cor_hex class+="is-invalid" %}
+                  {% else %}
+                    {{ form.cor_hex }}
+                  {% endif %}
+
+                  {# campo texto para #RRGGBB #}
+                  <input type="text"
+                        id="corHexText"
+                        class="form-control form-control-sm"
+                        style="max-width: 110px;"
+                        value="{{ form.initial.cor_hex|default_if_none:'#1E90FF' }}"
+                        placeholder="#RRGGBB"
+                        inputmode="text" autocomplete="off">
+                </div>
+                {% for e in form.cor_hex.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+
+                {# Escala (matiz) + presets #}
+                <div class="mb-2">
+                  <label class="form-label small mb-1">Escala de cores</label>
+                  <input type="range" id="hueSlider" min="0" max="360" step="1" class="form-range">
+                  <style>
+                    /* faixa arco-íris no track do range (matiz) */
+                    #hueSlider{
+                      background: linear-gradient(to right,
+                        hsl(0, 100%, 50%),
+                        hsl(60, 100%, 50%),
+                        hsl(120, 100%, 40%),
+                        hsl(180, 100%, 40%),
+                        hsl(240, 100%, 60%),
+                        hsl(300, 100%, 50%),
+                        hsl(360, 100%, 50%)
+                      );
+                      height: .5rem; border-radius: .5rem;
+                    }
+                  </style>
+                </div>
+
+                <div class="mb-1">
+                  <label class="form-label small mb-1">Sugestões</label>
+                  <div class="d-flex flex-wrap gap-1">
+                    {% for c in color_presets %}
+                      <button type="button" class="btn btn-sm border" data-pick="{{ c }}" style="background: {{ c }};"></button>
+                    {% endfor %}
+                  </div>
+                </div>
+
+                <div class="form-text">
+                  Essa cor será usada para identificar o funcionário no calendário de agendamentos.
+                </div>
+              </div>
+            {% endif %}
+            
           </div>
 
           {% include 'cadastro/partials/agenda_formset.html' with formset=formset %}
@@ -186,3 +246,86 @@
 </div>
 
 {% endblock %}
+
+<script>
+(function(){
+  const inputColor = document.getElementById('{{ form.cor_hex.auto_id }}'); // input type=color
+  const inputText  = document.getElementById('corHexText');
+  const hueSlider  = document.getElementById('hueSlider');
+
+  if (!inputColor || !inputText || !hueSlider) return;
+
+  const HEX_RE = /^#([0-9a-f]{6})$/i;
+
+  function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+  function hslToHex(h, s=100, l=50){
+    h = (h % 360 + 360) % 360; s = clamp(s,0,100)/100; l = clamp(l,0,100)/100;
+    const c = (1 - Math.abs(2*l-1)) * s;
+    const x = c * (1 - Math.abs((h/60)%2 - 1));
+    const m = l - c/2;
+    let r=0,g=0,b=0;
+    if (0<=h && h<60){ r=c; g=x; b=0 }
+    else if (60<=h && h<120){ r=x; g=c; b=0 }
+    else if (120<=h && h<180){ r=0; g=c; b=x }
+    else if (180<=h && h<240){ r=0; g=x; b=c }
+    else if (240<=h && h<300){ r=x; g=0; b=c }
+    else { r=c; g=0; b=x }
+    const toHex = v => (Math.round((v+m)*255)).toString(16).padStart(2,'0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+  }
+
+  function hexToHue(hex){
+    // Aproxima matiz a partir do hex (para posicionar o slider)
+    hex = hex.replace('#','');
+    const r = parseInt(hex.slice(0,2),16)/255;
+    const g = parseInt(hex.slice(2,4),16)/255;
+    const b = parseInt(hex.slice(4,6),16)/255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    const d = max - min;
+    if (d === 0) return 0;
+    let h;
+    switch(max){
+      case r: h = ((g-b)/d) % 6; break;
+      case g: h = (b-r)/d + 2; break;
+      default: h = (r-g)/d + 4;
+    }
+    h = Math.round(h*60);
+    if (h<0) h+=360;
+    return h;
+  }
+
+  function setHex(hex, from){
+    if (!HEX_RE.test(hex)) return;
+    inputColor.value = hex;
+    inputText.value  = hex.toUpperCase();
+    if (from !== 'slider'){
+      // reposiciona slider para o tom escolhido
+      hueSlider.value = hexToHue(hex);
+    }
+  }
+
+  // Inicializa com o valor atual
+  setHex(inputColor.value || inputText.value || '#1E90FF');
+
+  // Eventos
+  inputColor.addEventListener('input', () => setHex(inputColor.value, 'picker'));
+  inputText.addEventListener('input', () => {
+    let v = inputText.value.trim();
+    if (v && v[0] !== '#') v = '#'+v;
+    if (HEX_RE.test(v)) setHex(v, 'text');
+  });
+
+  hueSlider.addEventListener('input', () => {
+    const h = Number(hueSlider.value||0);
+    const hex = hslToHex(h, 100, 50);  // saturação 100%, luz 50% (vivo, legível)
+    setHex(hex, 'slider');
+  });
+
+  // Presets
+  document.querySelectorAll('[data-pick]').forEach(btn => {
+    btn.addEventListener('click', () => setHex(btn.dataset.pick, 'preset'));
+  });
+})();
+</script>
+

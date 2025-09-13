@@ -238,15 +238,20 @@ def owner_sobre(request):
 def owner_home_agendamentos(request):
     lojas = request.user.lojas.order_by('nome')
 
-    loja_id = request.GET.get('loja_filtro') or request.session.get('loja_filtro')
+    # aceita valor de loja via GET (navegação) ou POST (submissões HTMX)
+    loja_id = (
+        request.GET.get('loja_filtro')
+        or request.POST.get('loja_filtro')
+        or request.session.get('loja_filtro')
+    )
     loja = lojas.filter(id=loja_id).first() or lojas.first()
     if loja:
         request.session['loja_filtro'] = loja.id
 
     # mês/ano atuais a partir da query (?y=2025&m=9), default = hoje
     try:
-        y = int(request.GET.get('y') or request.GET.get('year'))
-        m = int(request.GET.get('m') or request.GET.get('month'))
+        y = int((request.GET.get('y') or request.POST.get('y') or request.GET.get('year') or request.POST.get('year') or 0))
+        m = int((request.GET.get('m') or request.POST.get('m') or request.GET.get('month') or request.POST.get('month') or 0))
         current = date(y, m, 1)
     except Exception:
         today = date.today()

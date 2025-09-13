@@ -1,49 +1,106 @@
 {# accounts/partials/criar_atendimento_stage2.html #}
+
 <div id="stage2-modal">
-  <div class="mb-3">
-    <label for="funcionario" class="form-label">Funcionário</label>
-    <select class="form-select" id="funcionario" name="funcionario"
-            hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
-            hx-trigger="change"
-            hx-target="#slot-modal"
-            hx-include="#data"
-            hx-swap="innerHTML"
-            hx-select="option">
-      {% for f in funcionarios %}
-        <option value="{{ f.id }}">{{ f.nome }}</option>
-      {% empty %}
-        <option value="">Nenhum funcionário nesta loja</option>
-      {% endfor %}
-    </select>
-  </div>
+  <div class="row g-3">
 
-  <div class="mb-3">
-    <label for="servicos" class="form-label">Serviços</label>
-    <select class="form-select" id="servicos" name="servicos" multiple>
-      {% for s in servicos %}
-        <option value="{{ s.id }}">{{ s.nome }}</option>
-      {% empty %}
-        <option value="">Nenhum serviço nesta loja</option>
-      {% endfor %}
-    </select>
-  </div>
+    {# Funcionário #}
+    <div class="col-12 col-md-6">
+      <label for="funcionario" class="form-label">Funcionário</label>
+      <select
+        class="form-select"
+        id="funcionario"
+        name="funcionario"
+        hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
+        hx-trigger="change"
+        hx-target="#slot-modal"
+        hx-swap="innerHTML"
+        hx-select="option"
+        hx-include="#data, input.servico-checkbox:checked"
+        hx-indicator="#slots-loading"
+      >
+        {% for f in funcionarios %}
+          <option value="{{ f.id }}">{{ f.nome }}</option>
+        {% empty %}
+          <option value="">Nenhum funcionário nesta loja</option>
+        {% endfor %}
+      </select>
+    </div>
 
-  <div class="mb-3">
-    <label for="data" class="form-label">Data</label>
-    <input type="date" class="form-control" id="data" name="data"
-           value="{{ dia|date:'Y-m-d' }}"
-           hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
-           hx-trigger="change"
-           hx-target="#slot-modal"
-           hx-include="#funcionario"
-           hx-swap="innerHTML"
-           hx-select="option">
-  </div>
+    {# Data #}
+    <div class="col-12 col-md-6">
+      <label for="data" class="form-label">Data</label>
+      <input
+        type="date"
+        class="form-control"
+        id="data"
+        name="data"
+        value="{{ dia|date:'Y-m-d' }}"
+        min="{{ today|date:'Y-m-d' }}"
+        hx-get="{% url 'accounts:owner_slots_disponiveis' %}"
+        hx-trigger="change"
+        hx-target="#slot-modal"
+        hx-swap="innerHTML"
+        hx-select="option"
+        hx-include="#funcionario, input.servico-checkbox:checked"
+        hx-indicator="#slots-loading"
+      >
+    </div>
 
-  <div class="mb-3">
-    <label for="slot-modal" class="form-label">Horário</label>
-    <select class="form-select" id="slot-modal" name="slot">
-      <option value="">Selecione funcionário e data</option>
-    </select>
+    {# Serviços em grade com busca #}
+    <div class="mb-3">
+      <div class="service-toolbar d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <div class="flex-grow-1" style="min-width: 220px;">
+          <input type="search" class="form-control" id="busca-servicos-criar-atendimento" placeholder="Buscar serviço...">
+        </div>
+        <span class="badge bg-primary-subtle text-primary-emphasis" id="badge-total-criar-atendimento">Total: R$ 0,00</span>
+        <span class="badge bg-secondary-subtle text-secondary-emphasis" id="badge-count-criar-atendimento">0 selecionado(s)</span>
+      </div>
+
+      <div class="service-grid" id="lista-servicos-criar-atendimento">
+        {% for s in servicos %}
+          {% with preco_str=s.preco|floatformat:2 selected_vals=form.servicos.value %}
+            <input
+              class="btn-check servico-checkbox"
+              type="checkbox"
+              name="servicos"
+              value="{{ s.pk }}"
+              id="svc-{{ s.pk }}"
+              data-preco="{{ preco_str }}"
+              data-nome="{{ s.nome|lower }}"
+              {% if selected_vals and s.pk|stringformat:"s" in selected_vals %}checked{% endif %}
+            >
+            <label class="btn btn-outline-primary service-tile" for="svc-{{ s.pk }}" title="{{ s.nome }}">
+              <span class="service-name">
+                <strong>{{ s.nome }}</strong>
+                {% if s.duracao_minutos %}<small class="text-muted"> • {{ s.duracao_minutos }} min</small>{% endif %}
+              </span>
+              <span class="service-price">R$ {{ preco_str }}</span>
+            </label>
+          {% endwith %}
+        {% endfor %}
+      </div>
+
+      {% if form.servicos.errors %}
+        <div class="text-danger small mt-1">
+          {% for e in form.servicos.errors %}<div>{{ e }}</div>{% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    {# Horário (carregado via HTMX) #}
+    <div class="col-12">
+      <label for="slot-modal" class="form-label">Horário</label>
+      <div class="d-flex align-items-center gap-2">
+        <select class="form-select" id="slot-modal" name="slot" style="max-width: 420px;">
+          <option value="">Selecione funcionário, data e serviços</option>
+        </select>
+        <div id="slots-loading" class="htmx-indicator" aria-live="polite" aria-busy="true" style="display:none;">
+          <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Carregando…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>

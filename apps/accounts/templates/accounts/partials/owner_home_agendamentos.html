@@ -19,6 +19,9 @@
           <option value="{{ l.id }}" {% if loja and l.id == loja.id %}selected{% endif %}>{{ l.nome }}</option>
         {% endfor %}
       </select>
+      {# Mantém o mês/ano atual quando ações via POST incluirem este form #}
+      <input type="hidden" name="y" value="{{ current.year }}">
+      <input type="hidden" name="m" value="{{ current.month }}">
     </form>
   </div>
 
@@ -67,6 +70,17 @@
     .evt + .evt { margin-top: .25rem; }
     .evt .meta { color: var(--bs-secondary-color); }
     .evt .actions { text-align: right; }
+
+    .flag-dot{
+      display:inline-block;
+      width:.75rem;
+      height:.75rem;
+      border-radius:50%;
+      border:1px solid rgba(0,0,0,.2);
+      margin: 0 .25rem;
+      vertical-align: middle;
+    }
+
   </style>
 
   <table class="table table-bordered calendar mb-0">
@@ -95,8 +109,14 @@
               {% for a in items %}
                 <div class="evt">
                   <div class="d-flex justify-content-between">
-                    <div><strong>{{ a.hora|time:"H:i" }}</strong> • {{ a.funcionario.nome }}</div>
-                  </div>
+                    <div>
+                      <strong>{{ a.hora|time:"H:i" }}</strong> •
+                      <span class="flag-dot"
+                            style="background-color: {{ a.funcionario.cor_hex|default:'#1E90FF' }};"
+                            aria-label="Cor do profissional {{ a.funcionario.nome }}"></span>
+                      {{ a.funcionario.nome }}
+                    </div>
+                  </div>   
                   <div class="meta">
                     {{ a.cliente.full_name }}{% if a.cliente.phone %} — {{ a.cliente.phone }}{% endif %}
                   </div>
