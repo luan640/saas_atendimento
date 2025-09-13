@@ -317,6 +317,78 @@
   })();
 </script>
 
+<script>
+(function(){
+  const KEY_MODE = 'ag_view_mode';   // 'month' | 'day'
+  const KEY_DAY  = 'ag_view_day';    // 'YYYY-MM-DD'
+
+  // Salva preferência ao clicar nos botões de modo
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[data-view]');
+    if (!a) return;
+    const mode = a.getAttribute('data-view');
+    try {
+      localStorage.setItem(KEY_MODE, mode);
+      // se for "day", tente capturar o parâmetro d=YYYY-MM-DD do hx-get/href
+      const u = a.getAttribute('hx-get') || a.getAttribute('href') || '';
+      const d = (u && new URL(u, location.origin).searchParams.get('d')) || null;
+      if (mode === 'day' && d) localStorage.setItem(KEY_DAY, d);
+    } catch(_) {}
+  }, true);
+
+  // Quando o fragmento é (re)inserido, alinhe ao que está no localStorage
+  document.body.addEventListener('htmx:afterSwap', (e) => {
+    const section = document.getElementById('agendamentos-section');
+    if (!section || e.target !== section) return;
+
+    const current = section.getAttribute('data-view-mode'); // 'month' | 'day'
+    let pref;
+    try { pref = localStorage.getItem(KEY_MODE); } catch(_) {}
+
+    if (!pref || pref === current) return; // já está como o usuário quer
+
+    // montar URL da preferência preservando a loja atual
+    const lojaSel = section.querySelector('select[name="loja_filtro"]');
+    const lojaQS  = lojaSel?.value ? `&loja_filtro=${encodeURIComponent(lojaSel.value)}` : '';
+    const baseUrl = "{% url 'accounts:owner_home_agendamentos' %}";
+
+    let url;
+    if (pref === 'day') {
+      let d;
+      try { d = localStorage.getItem(KEY_DAY); } catch(_) {}
+      if (!d) {
+        // fallback = hoje no fuso do navegador
+        d = new Date().toISOString().slice(0,10);
+        try { localStorage.setItem(KEY_DAY, d); } catch(_) {}
+      }
+      url = `${baseUrl}?view=day&d=${encodeURIComponent(d)}${lojaQS}`;
+    } else {
+      const y = section.getAttribute('data-current-y');
+      const m = section.getAttribute('data-current-m');
+      // se por algum motivo não houver y/m no DOM, volte para o mês atual
+      const now = new Date();
+      const yy = y || now.getFullYear();
+      const mm = m || (now.getMonth()+1);
+      url = `${baseUrl}?view=month&y=${yy}&m=${mm}${lojaQS}`;
+    }
+
+    if (window.htmx) {
+      htmx.ajax('GET', url, { target: '#agendamentos-section', swap: 'outerHTML' });
+    }
+  });
+
+  // Primeira carga (sem swap): força a checagem uma vez
+  document.addEventListener('DOMContentLoaded', () => {
+    const section = document.getElementById('agendamentos-section');
+    if (!section) return;
+    // Simula um afterSwap para aproveitar a mesma lógica
+    const evt = new Event('htmx:afterSwap', { bubbles: true });
+    Object.defineProperty(evt, 'target', { value: section });
+    document.body.dispatchEvent(evt);
+  });
+})();
+</script>
+
 {% block extra_js %}{% endblock %}
 
 </body>

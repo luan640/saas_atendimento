@@ -238,7 +238,7 @@ def owner_sobre(request):
 def owner_home_agendamentos(request):
     lojas = request.user.lojas.order_by('nome')
 
-    # aceita valor de loja via GET (navegação) ou POST (submissões HTMX)
+    # aceita valor de loja via GET (navegação) ou POST (submissões HTMX) ou sessão
     loja_id = (
         request.GET.get('loja_filtro')
         or request.POST.get('loja_filtro')
@@ -248,6 +248,45 @@ def owner_home_agendamentos(request):
     if loja:
         request.session['loja_filtro'] = loja.id
 
+    # modo de visualização: 'month' (padrão) ou 'day'
+    view_mode = (request.GET.get('view') or request.POST.get('view') or 'month').lower()
+
+    # ---------- MODO DIA ----------
+    if view_mode == 'day':
+        d_str = request.GET.get('d') or request.POST.get('d')
+        try:
+            day = date.fromisoformat(d_str) if d_str else date.today()
+        except ValueError:
+            day = date.today()
+
+        # pendentes do DIA selecionado
+        day_qs = (
+            Agendamento.objects
+            .filter(loja=loja, data=day, confirmado=False, no_show=False)
+            .select_related('funcionario', 'cliente')
+            .prefetch_related('servicos')
+            .order_by('hora', 'funcionario__nome')
+        )
+
+        # current = primeiro dia do mês do "day" (usado no toggle para voltar ao mês)
+        current = day.replace(day=1)
+
+        ctx = {
+            'lojas': lojas,
+            'loja': loja,
+            'view_mode': 'day',
+            'day': day,
+            'day_prev': day - timedelta(days=1),
+            'day_next': day + timedelta(days=1),
+            'day_items': day_qs,
+            'today': date.today(),
+            'current': current,  # para link do botão "Mês"
+            'total_pendentes': day_qs.count(),
+        }
+
+        return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
+
+    # ---------- MODO MENSAL (padrão) ----------
     # mês/ano atuais a partir da query (?y=2025&m=9), default = hoje
     try:
         y = int((request.GET.get('y') or request.POST.get('y') or request.GET.get('year') or request.POST.get('year') or 0))
@@ -262,11 +301,13 @@ def owner_home_agendamentos(request):
     start, end = weeks_dates[0][0], weeks_dates[-1][-1]
 
     # Somente pendentes (nem confirmado, nem no_show) no range visível do calendário
-    pendentes_qs = (Agendamento.objects
+    pendentes_qs = (
+        Agendamento.objects
         .filter(loja=loja, data__range=[start, end], confirmado=False, no_show=False)
         .select_related('funcionario', 'cliente')
         .prefetch_related('servicos')
-        .order_by('data', 'hora'))
+        .order_by('data', 'hora')
+    )
 
     # Mapa por dia -> lista de pendentes
     by_day = {}
@@ -283,6 +324,7 @@ def owner_home_agendamentos(request):
     ctx = {
         'lojas': lojas,
         'loja': loja,
+        'view_mode': 'month',
         'weeks': weeks,
         'current': current,
         'today': date.today(),
@@ -290,9 +332,6 @@ def owner_home_agendamentos(request):
         'next_y': next_first.year, 'next_m': next_first.month,
         'total_pendentes': pendentes_qs.count(),
     }
-
-    if request.headers.get('HX-Request'):
-        return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
 
     return render(request, 'accounts/partials/owner_home_agendamentos.html', ctx)
 
@@ -365,7 +404,15 @@ def owner_criar_atendimento(request):
             hora=hora,
         )
         ag.servicos.set(servicos_qs)
-        return owner_home_agendamentos(request)
+
+        resp = owner_home_agendamentos(request)  # mantém o fluxo atual
+
+        # DISPARA O EVENTO PARA O TOAST (ouça em document.body 'show-toast')
+        resp['HX-Trigger'] = json.dumps({
+            "show-toast": {"text": "Agendamento realizado com sucesso!", "level": "success"}
+        })
+
+        return resp
 
     # GET: etapa 1 (Loja + Cliente)
     clientes = request.user.clientes.select_related('user').order_by('user__full_name')

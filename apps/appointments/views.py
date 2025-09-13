@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 from calendar import Calendar
+import json 
+from urllib.parse import urlparse, parse_qs
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
@@ -11,6 +13,23 @@ from apps.cadastro.models import Loja, Funcionario, Servico
 from .models import Agendamento
 from .forms import AgendamentoDataHoraForm, FinalizarAtendimentoForm
 from .utils import gerar_slots_disponiveis
+from apps.accounts.views import owner_home_agendamentos
+
+def _inherit_htmx_query(request):
+    """Copia view/d/y/m/loja_filtro do HX-Current-URL (se houver) para request.GET."""
+    hx_url = request.headers.get('HX-Current-URL') or ''
+    if not hx_url:
+        return
+    parsed = urlparse(hx_url)
+    qs = parse_qs(parsed.query)
+    if not qs:
+        return
+    # torne GET mutável e injete apenas chaves que nos interessam
+    mutable = request.GET.copy()
+    for key in ('view', 'd', 'y', 'm', 'loja_filtro'):
+        if key in qs and qs[key]:
+            mutable[key] = qs[key][0]
+    request.GET = mutable
 
 @login_required
 def agendamento_start(request):
@@ -243,10 +262,20 @@ def finalizar_agendamento(request, pk):
                 "next_m": next_first.month,
                 "total_pendentes": pendentes_qs.count(),
             }
-            response = render(request, "accounts/partials/owner_home_agendamentos.html", ctx)
-            response["HX-Retarget"] = "#agendamentos-section"
-            response["HX-Reswap"] = "outerHTML"
-            return response
+
+            # >>> herda os parâmetros da tela atual (view=day/d=... ou month/y&m)
+            _inherit_htmx_query(request)
+
+            # >>> delega para a view que renderiza o calendário/lista respeitando o modo atual
+            resp = owner_home_agendamentos(request)
+
+            resp["HX-Retarget"] = "#agendamentos-section"
+            resp["HX-Reswap"]   = "outerHTML"
+            resp["HX-Trigger"]  = json.dumps({
+                "show-toast": {"text": "Agendamento finalizado com sucesso!", "level": "success"}
+            })
+            return resp
+
     else:
         total = agendamento.servicos.aggregate(total=Sum("preco"))["total"] or 0
         form = FinalizarAtendimentoForm(
@@ -324,6 +353,10 @@ def marcar_no_show(request, pk):
         response = render(request, "accounts/partials/owner_home_agendamentos.html", ctx)
         response["HX-Retarget"] = "#agendamentos-section"
         response["HX-Reswap"] = "outerHTML"
+        response['HX-Trigger'] = json.dumps({
+            "show-toast": {"text": "Não comparecimento salvo com sucesso!", "level": "success"}
+        })
+
         return response
 
     return render(
