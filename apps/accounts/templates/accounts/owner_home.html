@@ -25,7 +25,7 @@
 <div id="agendamentos-section"
      hx-get="{% url 'accounts:owner_home_agendamentos' %}"
      hx-trigger="load"
-     hx-target="#agendamentos-section"
+     hx-target="this"
      hx-swap="outerHTML">
   <div class="text-muted">Carregando agendamentos…</div>
 </div>

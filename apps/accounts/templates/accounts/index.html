@@ -389,6 +389,89 @@
 })();
 </script>
 
+<script>
+(() => {
+  const SLICE = 400; // quantos chars mostrar da resposta
+
+  // Logger geral do HTMX
+  if (window.htmx) {
+    htmx.logger = (elt, name, detail) => {
+      console.debug('[HTMX]', name, elt, detail);
+    };
+  }
+
+  // Antes de cada request: quem disparou, para onde vai, e attrs críticos
+  document.body.addEventListener('htmx:beforeRequest', (e) => {
+    const el = e.detail.elt;
+    const attrs = (n)=> el?.getAttribute(n) || '';
+    console.log('%c[HTMX beforeRequest]',
+      'color:#0969da;font-weight:700',
+      {
+        from: el,
+        method: e.detail.verb,
+        url: e.detail.pathInfo?.path,
+        params: e.detail.parameters,
+        hxTarget: attrs('hx-target'),
+        hxSelect: attrs('hx-select'),
+        hxSwap: attrs('hx-swap'),
+      }
+    );
+  });
+
+  // Quando der swapError: mostra diagnóstico provável
+  document.body.addEventListener('htmx:swapError', (e) => {
+    const el = e.detail.elt;
+    const attrs = (n)=> el?.getAttribute(n) || '';
+    const xhr = e.detail.xhr;
+    const txt = xhr?.responseText || '';
+    const sel = attrs('hx-select');
+    const targetSel = attrs('hx-target') || (e.detail.target ? (e.detail.target.id ? '#'+e.detail.target.id : e.detail.target.tagName) : '(desconhecido)');
+
+    // tenta confirmar se o hx-select existe na resposta
+    let found = '(sem hx-select)';
+    if (sel) {
+      try {
+        const doc = new DOMParser().parseFromString(txt, 'text/html');
+        found = !!doc.querySelector(sel);
+      } catch {}
+    }
+
+    console.error('%c[HTMX swapError]',
+      'color:#d1242f;font-weight:700',
+      {
+        status: xhr?.status,
+        hxTarget: targetSel,
+        hxSelect: sel || '(none)',
+        selectFoundInResponse: found,
+        responseSnippet: txt.slice(0, SLICE)
+      }
+    );
+
+    // dica automática
+    if (sel && found === false) {
+      console.warn('[HTMX hint] A resposta NÃO contém', sel, '— verifique o template que a view retorna OU troque para hx-swap="innerHTML".');
+    }
+    if (!document.querySelector(targetSel) && targetSel.startsWith('#')) {
+      console.warn('[HTMX hint] O hx-target', targetSel, 'não existe no DOM na hora do swap.');
+    }
+  });
+
+  // Também loga erros de resposta (500/404/…)
+  document.body.addEventListener('htmx:responseError', (e) => {
+    const xhr = e.detail.xhr;
+    console.error('[HTMX responseError]', xhr?.status, String(xhr?.responseText||'').slice(0,SLICE));
+  });
+
+  // 204 No Content → não swapar (evita “apagar” conteúdo)
+  document.body.addEventListener('htmx:beforeSwap', (e) => {
+    if (e.detail.xhr && e.detail.xhr.status === 204) {
+      e.detail.shouldSwap = false;
+    }
+  });
+})();
+</script>
+
+
 {% block extra_js %}{% endblock %}
 
 </body>

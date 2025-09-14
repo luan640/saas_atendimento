@@ -17,18 +17,23 @@ from .utils import gerar_slots_disponiveis
 
 def _inherit_htmx_query(request):
     """Copia view/d/y/m/loja_filtro do HX-Current-URL (se houver) para request.GET."""
+    
     hx_url = request.headers.get('HX-Current-URL') or ''
+
     if not hx_url:
         return
+
     parsed = urlparse(hx_url)
     qs = parse_qs(parsed.query)
     if not qs:
         return
+
     # torne GET mutável e injete apenas chaves que nos interessam
     mutable = request.GET.copy()
     for key in ('view', 'd', 'y', 'm', 'loja_filtro'):
         if key in qs and qs[key]:
             mutable[key] = qs[key][0]
+
     request.GET = mutable
 
 @login_required

@@ -1,35 +1,83 @@
-<div class="row">
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-header">
-        Faturado Hoje
+<style>
+  /* Stats – visual compacto, responsivo e acessível */
+  .stat-card{ border:0; border-radius:1rem; overflow:hidden; }
+  .stat-body{ display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1rem 1.25rem; }
+  .stat-kpi{ line-height:1.1; }
+  .stat-label{ font-size:.9rem; opacity:.9; }
+  .stat-value{ font-size:1.9rem; font-weight:800; letter-spacing:-.02em; }
+  .stat-icon{
+    width:3rem; height:3rem; border-radius:.75rem;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 16px rgba(0,0,0,.08) inset, 0 2px 8px rgba(0,0,0,.06);
+  }
+  .stat-foot{ padding:.5rem 1.25rem 1rem; display:flex; gap:.5rem; align-items:center; }
+  .stat-foot .badge{ font-weight:600; }
+  @media (max-width: 576px){
+    .stat-value{ font-size:1.6rem; }
+  }
+</style>
+
+<div class="row g-3">
+  <!-- Faturado hoje -->
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="card stat-card bg-primary-subtle">
+      <div class="stat-body">
+        <div class="stat-kpi">
+          <div class="stat-label text-primary-emphasis">Faturado hoje</div>
+          <div class="stat-value text-primary-emphasis">
+            R$ {{ faturado_hoje|floatformat:2 }}
+          </div>
+        </div>
+        <div class="stat-icon bg-primary text-white">
+          <i class="ti ti-cash fs-5"></i>
+        </div>
       </div>
-      <div class="card-body">
-        <p class="card-text">R$ {{ faturado_hoje|floatformat:2 }}</p>
+      <div class="stat-foot">
+        <span class="badge bg-primary text-white">Rápido</span>
+        <small class="text-primary-emphasis-50">Resumo do dia</small>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-header">
-        Agendamentos hoje
+  <!-- Agendamentos hoje -->
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="card stat-card bg-success-subtle">
+      <div class="stat-body">
+        <div class="stat-kpi">
+          <div class="stat-label text-success-emphasis">Agendamentos hoje</div>
+          <div class="stat-value text-success-emphasis">
+            {{ agendamentos_hoje }}
+          </div>
+        </div>
+        <div class="stat-icon bg-success text-white">
+          <iconify-icon icon="tabler:calendar-check" class="fs-5"></iconify-icon>
+        </div>
       </div>
-      <div class="card-body">
-        <p class="card-text">{{ agendamentos_hoje }}</p>
+      <div class="stat-foot">
+        <span class="badge bg-success text-white">Agenda</span>
+        <small class="text-success-emphasis-50">Status ao vivo</small>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-header">
-        Cancelamentos
+  <!-- Cancelamentos -->
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="card stat-card bg-danger-subtle">
+      <div class="stat-body">
+        <div class="stat-kpi">
+          <div class="stat-label text-danger-emphasis">Cancelamentos</div>
+          <div class="stat-value text-danger-emphasis">
+            {{ no_show_hoje }}
+          </div>
+        </div>
+        <div class="stat-icon bg-danger text-white">
+          <i class="ti ti-calendar-x fs-5"></i>
+        </div>
       </div>
-      <div class="card-body">
-        <p class="card-text">{{ no_show_hoje }}</p>
+      <div class="stat-foot">
+        <span class="badge bg-danger text-white">Atenção</span>
+        <small class="text-danger-emphasis-50">Revise motivos</small>
       </div>
     </div>
   </div>
 </div>
-
