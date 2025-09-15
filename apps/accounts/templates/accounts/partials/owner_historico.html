@@ -1,0 +1,68 @@
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Data de agendamento</th>
+      <th>Data de atendimento</th>
+      <th>Cliente</th>
+      <th>Serviços</th>
+      <th>Valor</th>
+      <th>Desconto?</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ag in page_obj %}
+    <tr>
+      <td>{{ ag.criado_em|date:"d/m/Y H:i" }}</td>
+      <td>{{ ag.data|date:"d/m/Y" }} {{ ag.hora|time:"H:i" }}</td>
+      <td>{{ ag.cliente.full_name }}</td>
+      <td>
+        {% for s in ag.servicos.all %}{% if not forloop.first %}, {% endif %}{{ s.nome }}{% endfor %}
+      </td>
+      <td>{% if ag.valor_final %}R$ {{ ag.valor_final }}{% else %}-{% endif %}</td>
+      <td>{% if ag.teve_desconto %}Sim{% else %}Não{% endif %}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6">Nenhum atendimento encontrado.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<nav aria-label="Paginação">
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link"
+           hx-get="{% url 'accounts:owner_historico' %}?page={{ page_obj.previous_page_number }}"
+           hx-target="#owner-historico"
+           hx-select="#owner-historico"
+           hx-swap="outerHTML">&laquo;</a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+    {% endif %}
+
+    {% for i in page_obj.paginator.page_range %}
+      <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+        <a class="page-link"
+           hx-get="{% url 'accounts:owner_historico' %}?page={{ i }}"
+           hx-target="#owner-historico"
+           hx-select="#owner-historico"
+           hx-swap="outerHTML">{{ i }}</a>
+      </li>
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link"
+           hx-get="{% url 'accounts:owner_historico' %}?page={{ page_obj.next_page_number }}"
+           hx-target="#owner-historico"
+           hx-select="#owner-historico"
+           hx-swap="outerHTML">&raquo;</a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+    {% endif %}
+  </ul>
+</nav>

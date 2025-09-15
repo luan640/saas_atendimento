@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from django.db.models import Q, Sum, Count, Avg
 from django.views.decorators.http import require_POST
 from django.http import HttpRequest
+from django.core.paginator import Paginator
 
 from .forms import OwnerLoginForm, ClientStartForm, ClientVerifyForm
 from .models import User, ClientOTP, Subscription, Plan
@@ -220,6 +221,30 @@ def owner_dashboard(request):
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'accounts/partials/owner_dashboard.html', ctx)
     return render(request, 'accounts/owner_dashboard.html', ctx)
+
+@login_required
+@subscription_required
+def owner_historico(request):
+    if not getattr(request.user, 'is_owner', False):
+        return redirect('accounts:owner_login')
+
+    ag_qs = (
+        Agendamento.objects
+        .filter(loja__owner=request.user)
+        .select_related('cliente')
+        .prefetch_related('servicos')
+        .order_by('-data', '-hora')
+    )
+    paginator = Paginator(ag_qs, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    ctx = {'page_obj': page_obj}
+    target = request.headers.get('HX-Target')
+    if request.headers.get('HX-Request') and target != 'content':
+        return render(request, 'accounts/partials/owner_historico.html', ctx)
+    return render(request, 'accounts/owner_historico.html', ctx)
+
 
 @login_required
 @subscription_required
