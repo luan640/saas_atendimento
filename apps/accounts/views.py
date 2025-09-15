@@ -394,9 +394,10 @@ def owner_criar_atendimento(request):
 
         resp = owner_home_agendamentos(request)  # mantém o fluxo atual
 
-        # DISPARA O EVENTO PARA O TOAST (ouça em document.body 'show-toast')
+        # DISPARA EVENTOS PARA TOAST E ATUALIZAÇÃO DOS CARDS
         resp['HX-Trigger'] = json.dumps({
-            "show-toast": {"text": "Agendamento realizado com sucesso!", "level": "success"}
+            "show-toast": {"text": "Agendamento realizado com sucesso!", "level": "success"},
+            "reload-owner-home": None,
         })
 
         return resp

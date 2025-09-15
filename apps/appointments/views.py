@@ -277,7 +277,8 @@ def finalizar_agendamento(request, pk):
             resp["HX-Retarget"] = "#agendamentos-section"
             resp["HX-Reswap"]   = "outerHTML"
             resp["HX-Trigger"]  = json.dumps({
-                "show-toast": {"text": "Atendimento finalizado com sucesso!", "level": "success"}
+                "show-toast": {"text": "Atendimento finalizado com sucesso!", "level": "success"},
+                "reload-owner-home": None,
             })
             return resp
 
@@ -359,7 +360,8 @@ def marcar_no_show(request, pk):
         response["HX-Retarget"] = "#agendamentos-section"
         response["HX-Reswap"] = "outerHTML"
         response['HX-Trigger'] = json.dumps({
-            "show-toast": {"text": "Não comparecimento salvo com sucesso!", "level": "success"}
+            "show-toast": {"text": "Não comparecimento salvo com sucesso!", "level": "success"},
+            "reload-owner-home": None,
         })
 
         return response
