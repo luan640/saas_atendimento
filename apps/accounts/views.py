@@ -231,7 +231,7 @@ def owner_historico(request):
     ag_qs = (
         Agendamento.objects
         .filter(loja__owner=request.user)
-        .select_related('cliente')
+        .select_related('cliente', 'funcionario')
         .prefetch_related('servicos')
         .order_by('-data', '-hora')
     )

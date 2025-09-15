@@ -5,9 +5,11 @@
         <th>Data de agendamento</th>
         <th>Data de atendimento</th>
         <th>Cliente</th>
+        <th>Profissional</th>
         <th>Serviços</th>
         <th>Valor</th>
         <th>Desconto?</th>
+        <th>No-show?</th>
       </tr>
     </thead>
     <tbody>
@@ -16,15 +18,17 @@
         <td>{{ ag.criado_em|date:"d/m/Y H:i" }}</td>
         <td>{{ ag.data|date:"d/m/Y" }} {{ ag.hora|time:"H:i" }}</td>
         <td>{{ ag.cliente.full_name }}</td>
+        <td>{{ ag.funcionario.nome }}</td>
         <td>
           {% for s in ag.servicos.all %}{% if not forloop.first %}, {% endif %}{{ s.nome }}{% endfor %}
         </td>
         <td>{% if ag.valor_final %}R$ {{ ag.valor_final }}{% else %}-{% endif %}</td>
         <td>{% if ag.teve_desconto %}Sim{% else %}Não{% endif %}</td>
+        <td>{% if ag.no_show %}Sim{% else %}Não{% endif %}</td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="6">Nenhum atendimento encontrado.</td>
+        <td colspan="8">Nenhum atendimento encontrado.</td>
       </tr>
       {% endfor %}
     </tbody>
