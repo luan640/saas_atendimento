@@ -1,4 +1,22 @@
 <div id="owner-historico">
+  <form class="row g-2 mb-3"
+        hx-get="{% url 'accounts:owner_historico' %}"
+        hx-target="#owner-historico"
+        hx-select="#owner-historico"
+        hx-swap="outerHTML">
+    <div class="col">
+      <input type="date" name="inicio" class="form-control" value="{{ request.GET.inicio }}">
+    </div>
+    <div class="col">
+      <input type="date" name="fim" class="form-control" value="{{ request.GET.fim }}">
+    </div>
+    <div class="col">
+      <input type="text" name="cliente" class="form-control" placeholder="Cliente" value="{{ request.GET.cliente }}">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+    </div>
+  </form>
   <table class="table table-striped">
     <thead>
       <tr>
@@ -39,7 +57,7 @@
       {% if page_obj.has_previous %}
         <li class="page-item">
           <a class="page-link"
-             hx-get="{% url 'accounts:owner_historico' %}?page={{ page_obj.previous_page_number }}"
+             hx-get="{% url 'accounts:owner_historico' %}?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}"
              hx-target="#owner-historico"
              hx-select="#owner-historico"
              hx-swap="outerHTML">&laquo;</a>
@@ -51,7 +69,7 @@
       {% for i in page_obj.paginator.page_range %}
         <li class="page-item {% if page_obj.number == i %}active{% endif %}">
           <a class="page-link"
-             hx-get="{% url 'accounts:owner_historico' %}?page={{ i }}"
+             hx-get="{% url 'accounts:owner_historico' %}?page={{ i }}{% if querystring %}&{{ querystring }}{% endif %}"
              hx-target="#owner-historico"
              hx-select="#owner-historico"
              hx-swap="outerHTML">{{ i }}</a>
@@ -61,7 +79,7 @@
       {% if page_obj.has_next %}
         <li class="page-item">
           <a class="page-link"
-             hx-get="{% url 'accounts:owner_historico' %}?page={{ page_obj.next_page_number }}"
+             hx-get="{% url 'accounts:owner_historico' %}?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}"
              hx-target="#owner-historico"
              hx-select="#owner-historico"
              hx-swap="outerHTML">&raquo;</a>

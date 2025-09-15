@@ -235,11 +235,22 @@ def owner_historico(request):
         .prefetch_related('servicos')
         .order_by('-data', '-hora')
     )
+    inicio = request.GET.get('inicio')
+    fim = request.GET.get('fim')
+    cliente = request.GET.get('cliente')
+    if inicio:
+        ag_qs = ag_qs.filter(data__gte=inicio)
+    if fim:
+        ag_qs = ag_qs.filter(data__lte=fim)
+    if cliente:
+        ag_qs = ag_qs.filter(cliente__full_name__icontains=cliente)
     paginator = Paginator(ag_qs, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    ctx = {'page_obj': page_obj}
+    params = request.GET.copy()
+    params.pop('page', None)
+    ctx = {'page_obj': page_obj, 'querystring': params.urlencode()}
     target = request.headers.get('HX-Target')
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'accounts/partials/owner_historico.html', ctx)
