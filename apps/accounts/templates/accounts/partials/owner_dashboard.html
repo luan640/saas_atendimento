@@ -1,120 +1,243 @@
-{% load static %}
-<form method="get" class="row g-3 mb-4">
-  <div class="col-md-3">
-    <label class="form-label">Início</label>
-    <input type="date" name="start" class="form-control" value="{{ start|date:'Y-m-d' }}">
-  </div>
-  <div class="col-md-3">
-    <label class="form-label">Fim</label>
-    <input type="date" name="end" class="form-control" value="{{ end|date:'Y-m-d' }}">
-  </div>
-  <div class="col-md-4">
-    <label class="form-label">Lojas</label>
-    <select name="lojas" class="form-select" multiple>
-      {% for loja in lojas %}
-        <option value="{{ loja.id }}" {% if loja.id in lojas_ids %}selected{% endif %}>{{ loja.nome }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-md-2 d-flex align-items-end">
-    <button type="submit" class="btn btn-primary w-100">Filtrar</button>
-  </div>
-</form>
+{% load static i18n %}
 
-<div class="row mb-4">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">No-show</div>
-      <div class="card-body">
-        <p class="mb-1">Quantidade: {{ no_show_count }}</p>
-        <p class="mb-0">Percentual: {{ no_show_percent|floatformat:2 }}%</p>
+{# ----------- ESTILOS ---------- #}
+<style>
+  .dash-toolbar.card{border:0;border-radius:1rem;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+  .dash-toolbar .form-label{font-weight:600}
+  .btn-ghost{--bs-btn-color:var(--bs-secondary-color);--bs-btn-hover-bg:var(--bs-tertiary-bg);--bs-btn-border-color:transparent}
+  .choices{margin-bottom:0}
+  .choices__inner{border-radius:.5rem;padding:.4rem .6rem;min-height:auto}
+  .choices__list--multiple .choices__item{background:var(--bs-primary);border-color:var(--bs-primary);padding:.15rem .5rem}
+  .choices[data-type*="select-multiple"] .choices__button{border-left-color:rgba(255,255,255,.35)}
+  .kpi-card{border:0;border-radius:1rem;overflow:hidden}
+  .kpi-body{display:flex;gap:1rem;align-items:center;justify-content:space-between;padding:1rem 1.25rem}
+  .kpi-title{font-size:.9rem;opacity:.9}
+  .kpi-value{font-size:1.9rem;font-weight:800;letter-spacing:-.02em}
+  .kpi-icon{width:3rem;height:3rem;border-radius:.75rem;display:flex;align-items:center;justify-content:center}
+  @media (max-width:576px){.kpi-value{font-size:1.6rem}}
+  .card .card-header{font-weight:600}
+</style>
+
+{# ----------- TOOLBAR / FILTROS ---------- #}
+<div class="card dash-toolbar mb-4">
+  <div class="card-body">
+    <form id="dash-filter" method="get" class="row g-3 align-items-end">
+      <div class="col-12 col-md-3">
+        <label class="form-label">{% trans "Início" %}</label>
+        <div class="input-group">
+          <span class="input-group-text"><iconify-icon icon="tabler:calendar"></iconify-icon></span>
+          <input type="date" name="start" class="form-control" value="{{ start|date:'Y-m-d' }}">
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label">{% trans "Fim" %}</label>
+        <div class="input-group">
+          <span class="input-group-text"><iconify-icon icon="tabler:calendar-event"></iconify-icon></span>
+          <input type="date" name="end" class="form-control" value="{{ end|date:'Y-m-d' }}">
+        </div>
+      </div>
+      <div class="col-12 col-md-4">
+        <label class="form-label">{% trans "Lojas" %}</label>
+        <select id="filter-lojas" name="lojas" class="form-select" multiple>
+          {% for loja in lojas %}
+            <option value="{{ loja.id }}" {% if loja.id in lojas_ids %}selected{% endif %}>{{ loja.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-2 d-grid">
+        <button type="submit" class="btn btn-primary">{% trans "Filtrar" %}</button>
+      </div>
+
+      <div class="col-12 d-flex flex-wrap gap-2 mt-2">
+        <button type="button" class="btn btn-sm btn-ghost" data-range="today">
+          <iconify-icon icon="tabler:bolt"></iconify-icon> Hoje
+        </button>
+        <button type="button" class="btn btn-sm btn-ghost" data-range="7d">Últimos 7d</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-range="30d">Últimos 30d</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-range="month">Este mês</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-range="prev-month">Mês passado</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ----------- KPIs (ex.: No-show) ---------- #}
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="card kpi-card bg-danger-subtle">
+      <div class="kpi-body">
+        <div>
+          <div class="kpi-title text-danger-emphasis">No-show</div>
+          <div class="kpi-value text-danger-emphasis">{{ no_show_count }}</div>
+          <div class="text-danger-emphasis small">{{ no_show_percent|floatformat:2 }}%</div>
+        </div>
+        <div class="kpi-icon bg-danger text-white">
+          <iconify-icon icon="tabler:calendar-x"></iconify-icon>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="row mb-4">
-  <div class="col-md-6">
+{# ----------- CHARTS ---------- #}
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-header">Ticket médio por loja</div>
-      <div class="card-body"><div id="chart_ticket_medio"></div></div>
+      <div class="card-body"><div id="chart_ticket_medio" style="min-height:300px"></div></div>
     </div>
   </div>
-  <div class="col-md-6">
+  <div class="col-12 col-lg-6">
     <div class="card">
       <div class="card-header">Faturamento por funcionário</div>
-      <div class="card-body"><div id="chart_faturamento_func"></div></div>
+      <div class="card-body"><div id="chart_faturamento_func" style="min-height:300px"></div></div>
     </div>
   </div>
 </div>
 
-<div class="row mb-4">
+<div class="row g-3 mb-4">
   <div class="col-12">
     <div class="card">
       <div class="card-header">Faturamento por dia por loja</div>
-      <div class="card-body"><div id="chart_faturamento_dia"></div></div>
+      <div class="card-body"><div id="chart_faturamento_dia" style="min-height:320px"></div></div>
     </div>
   </div>
 </div>
 
-<div class="row mb-4">
+<div class="row g-3 mb-4">
   <div class="col-12">
     <div class="card">
       <div class="card-header">Agendamentos por dia por loja</div>
-      <div class="card-body"><div id="chart_agendamentos_dia"></div></div>
+      <div class="card-body"><div id="chart_agendamentos_dia" style="min-height:320px"></div></div>
     </div>
   </div>
 </div>
 
-<div class="row">
+<div class="row g-3">
   {% for serv in servicos_por_loja %}
-  <div class="col-md-4 mb-4">
+  <div class="col-12 col-md-6 col-xl-4">
     <div class="card">
-      <div class="card-header">Serviços - {{ serv.loja }}</div>
-      <div class="card-body"><div id="pie_servicos_{{ forloop.counter }}"></div></div>
+      <div class="card-header">Serviços — {{ serv.loja }}</div>
+      <div class="card-body"><div id="pie_servicos_{{ forloop.counter }}" style="min-height:300px"></div></div>
     </div>
   </div>
   {% endfor %}
 </div>
 
+{# ----------- LIBS ---------- #}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
 <script src="{% static 'libs/apexcharts/dist/apexcharts.min.js' %}"></script>
 <script>
-(function() {
-  var ticketChart = new ApexCharts(document.querySelector('#chart_ticket_medio'), {
-    chart: { type: 'bar', height: 300 },
+(function () {
+  // ---- Choices.js (multiselect bonito) ----
+  const lojaSelect = document.querySelector('#filter-lojas');
+  if (lojaSelect) {
+    new Choices(lojaSelect, {
+      removeItemButton: true,
+      placeholderValue: 'Selecione lojas…',
+      searchPlaceholderValue: 'Filtrar lojas…',
+      itemSelectText: 'Selecionar',
+      shouldSort: false
+    });
+  }
+
+  // ---- Presets de data (auto-preenche e envia) ----
+  const form = document.getElementById('dash-filter');
+  const startI = form?.querySelector('input[name="start"]');
+  const endI   = form?.querySelector('input[name="end"]');
+  function fmt(d){ return d.toISOString().slice(0,10); }
+  function setRange(kind){
+    const now = new Date(); let a,b;
+    if (kind==='today'){ a = b = new Date(now.getFullYear(), now.getMonth(), now.getDate()); }
+    else if (kind==='7d'){ b = new Date(); a = new Date(); a.setDate(b.getDate()-6); }
+    else if (kind==='30d'){ b = new Date(); a = new Date(); a.setDate(b.getDate()-29); }
+    else if (kind==='month'){ a = new Date(now.getFullYear(), now.getMonth(), 1); b = new Date(now.getFullYear(), now.getMonth()+1, 0); }
+    else if (kind==='prev-month'){ const y=now.getFullYear(), m=now.getMonth()-1; a=new Date(y, m, 1); b=new Date(y, m+1, 0); }
+    if (a&&b){ startI.value = fmt(a); endI.value = fmt(b); form.requestSubmit(); }
+  }
+  form?.querySelectorAll('[data-range]').forEach(btn=>{
+    btn.addEventListener('click', ()=> setRange(btn.dataset.range));
+  });
+
+  // ---- ApexCharts com tema Bootstrap ----
+  function bsVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  const colors = [
+    bsVar('--bs-primary'), bsVar('--bs-success'), bsVar('--bs-info'),
+    bsVar('--bs-warning'), bsVar('--bs-danger'), bsVar('--bs-secondary')
+  ].filter(Boolean);
+  const gridColor = bsVar('--bs-border-color') || '#e9ecef';
+  const labelColor = getComputedStyle(document.body).color;
+
+  const baseChart = {
+    chart: { toolbar: { show: false }, fontFamily: getComputedStyle(document.body).fontFamily, foreColor: labelColor },
+    grid: { borderColor: gridColor, strokeDashArray: 3 },
+    colors: colors
+  };
+
+  const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtBRL = v => BRL.format(Number(v || 0));
+  const fmtInt = v => Number(v || 0).toLocaleString('pt-BR');
+
+  // Ticket médio por loja
+  new ApexCharts(document.querySelector('#chart_ticket_medio'), {
+    ...baseChart,
+    chart: { ...baseChart.chart, type: 'bar', height: 300 },
     series: [{ name: 'Ticket médio', data: {{ ticket_medio_values|safe }} }],
-    xaxis: { categories: {{ ticket_medio_labels|safe }} }
-  });
-  ticketChart.render();
+    xaxis: { categories: {{ ticket_medio_labels|safe }}, axisBorder:{show:false}, axisTicks:{show:false} },
+    yaxis: { labels: { formatter: fmtBRL }, decimalsInFloat: 2 },
+    plotOptions: { bar: { borderRadius: 6, columnWidth: '45%' } },
+    dataLabels: { enabled: false },
+    tooltip: { y: { formatter: val => fmtBRL(val) } }
+  }).render();
 
-  var fatFunc = new ApexCharts(document.querySelector('#chart_faturamento_func'), {
-    chart: { type: 'bar', height: 300 },
+  // Faturamento por funcionário
+  new ApexCharts(document.querySelector('#chart_faturamento_func'), {
+    ...baseChart,
+    chart: { ...baseChart.chart, type: 'bar', height: 300 },
     series: [{ name: 'Faturamento', data: {{ fat_func_values|safe }} }],
-    xaxis: { categories: {{ fat_func_labels|safe }} }
-  });
-  fatFunc.render();
+    xaxis: { categories: {{ fat_func_labels|safe }}, axisBorder: { show:false }, axisTicks:{show:false} },
+    yaxis: { labels: { formatter: fmtBRL }, decimalsInFloat: 2 },
+    plotOptions: { bar: { borderRadius: 6, columnWidth: '45%' } },
+    dataLabels: { enabled: false },
+    tooltip: { y: { formatter: val => 'R$ ' + Number(val).toFixed(2).replace('.', ',') } }
+  }).render();
 
-  var fatDia = new ApexCharts(document.querySelector('#chart_faturamento_dia'), {
-    chart: { type: 'line', height: 300 },
+  // Faturamento por dia por loja
+  new ApexCharts(document.querySelector('#chart_faturamento_dia'), {
+    ...baseChart,
+    chart: { ...baseChart.chart, type: 'line', height: 320 },
     series: {{ fat_dia_series|safe }},
-    xaxis: { categories: {{ dia_labels|safe }} }
-  });
-  fatDia.render();
+    xaxis: { categories: {{ dia_labels|safe }}, axisBorder: { show:false }, axisTicks:{show:false } },
+    stroke: { width: 3 },
+    markers: { size: 3 },
+    tooltip: { y: { formatter: val => 'R$ ' + Number(val).toFixed(2).replace('.', ',') } },
+    legend: { position: 'top' }
+  }).render();
 
-  var agDia = new ApexCharts(document.querySelector('#chart_agendamentos_dia'), {
-    chart: { type: 'line', height: 300 },
+  // Agendamentos por dia por loja
+  new ApexCharts(document.querySelector('#chart_agendamentos_dia'), {
+    ...baseChart,
+    chart: { ...baseChart.chart, type: 'line', height: 320 },
     series: {{ ag_dia_series|safe }},
-    xaxis: { categories: {{ dia_labels|safe }} }
-  });
-  agDia.render();
+    xaxis: { categories: {{ dia_labels|safe }}, axisBorder: { show:false }, axisTicks:{show:false } },
+    yaxis: { labels: { formatter: fmtBRL }, decimalsInFloat: 2 },
+    stroke: { width: 3 },
+    markers: { size: 3 },
+    legend: { position: 'top' }
+  }).render();
 
+  // Pies por loja (serviços)
   {% for serv in servicos_por_loja %}
-  var pie{{ forloop.counter }} = new ApexCharts(document.querySelector('#pie_servicos_{{ forloop.counter }}'), {
-    chart: { type: 'pie', height: 300 },
+  new ApexCharts(document.querySelector('#pie_servicos_{{ forloop.counter }}'), {
+    ...baseChart,
+    chart: { ...baseChart.chart, type: 'pie', height: 300 },
     labels: {{ serv.labels|safe }},
-    series: {{ serv.values|safe }}
-  });
-  pie{{ forloop.counter }}.render();
+    series: {{ serv.values|safe }},
+    legend: { position: 'bottom' },
+    tooltip: { y: { formatter: val => Number(val).toLocaleString('pt-BR') } }
+  }).render();
   {% endfor %}
 })();
 </script>
