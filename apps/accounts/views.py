@@ -24,6 +24,13 @@ import json
 from datetime import date, timedelta, time
 from calendar import Calendar
 
+# ========== HTMX HELPERS ==========
+
+
+def _hx_target(request: HttpRequest) -> str:
+    """Normaliza o valor de HX-Target removendo '#' inicial."""
+    return (request.headers.get('HX-Target') or '').lstrip('#')
+
 # ========== HELPERS ==========
 
 def _issue_otp(phone: str) -> str:
@@ -133,7 +140,7 @@ def owner_home(request):
         'agendamentos_hoje': agendamentos,
         'no_show_hoje': no_show,
     }
-    target = request.headers.get('HX-Target')
+    target = _hx_target(request)
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'accounts/partials/owner_home.html', ctx)
     return render(request, 'accounts/owner_home.html', ctx)
@@ -217,7 +224,7 @@ def owner_dashboard(request):
         'no_show_count': no_show_count,
         'no_show_percent': no_show_percent,
     }
-    target = request.headers.get('HX-Target')
+    target = _hx_target(request)
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'accounts/partials/owner_dashboard.html', ctx)
     return render(request, 'accounts/owner_dashboard.html', ctx)
@@ -251,7 +258,7 @@ def owner_historico(request):
     params = request.GET.copy()
     params.pop('page', None)
     ctx = {'page_obj': page_obj, 'querystring': params.urlencode()}
-    target = request.headers.get('HX-Target')
+    target = _hx_target(request)
     if request.headers.get('HX-Request') and target != 'content':
         return render(request, 'accounts/partials/owner_historico.html', ctx)
     return render(request, 'accounts/owner_historico.html', ctx)

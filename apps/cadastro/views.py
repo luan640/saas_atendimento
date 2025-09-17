@@ -15,6 +15,11 @@ from apps.accounts.decorators import subscription_required
 
 import json
 
+
+def _hx_target(request) -> str:
+    """Normaliza o valor do cabeçalho HX-Target removendo '#'."""
+    return (request.headers.get('HX-Target') or '').lstrip('#')
+
 # ========== UTILITÁRIAS ==========
 
 def _get_loja_ativa(request, lojas_qs):
@@ -141,7 +146,7 @@ def owner_shops(request):
             l.public_path = l.get_public_path()
         return lojas_list
 
-    target = request.headers.get('HX-Target')
+    target = _hx_target(request)
 
     if request.method == 'POST':
         form = LojaForm(request.POST, user=request.user)
@@ -271,7 +276,7 @@ def funcionarios(request):
 
     lojas_qs = request.user.lojas.order_by('nome')
     loja = _get_loja_ativa(request, lojas_qs)
-    target = request.headers.get('HX-Target')
+    target = _hx_target(request)
 
     # Sem lojas ainda? oriente o dono a criar
     if not loja:
@@ -438,6 +443,9 @@ def servicos(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
 
+    is_htmx = request.headers.get('HX-Request')
+    target = _hx_target(request)
+
     lojas_qs = request.user.lojas.order_by('nome')
     loja_id = (request.GET.get('loja_filtro') or request.POST.get('loja_filtro') or
                request.GET.get('loja') or request.POST.get('loja'))
@@ -451,7 +459,7 @@ def servicos(request):
 
     if not loja:
         ctx = {'lojas': lojas_qs, 'loja': None, 'form': None, 'servicos': [], 'filtros': {}, 'profissionais': []}
-        tpl = 'cadastro/partials/servicos.html' if (request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content') else 'cadastro/servicos.html'
+        tpl = 'cadastro/partials/servicos.html' if (is_htmx and target != 'content') else 'cadastro/servicos.html'
         return render(request, tpl, ctx)
 
     filtros = _parse_filtros(request)
@@ -478,7 +486,7 @@ def servicos(request):
             }
 
             # Se for HTMX, retorna parcial + evento de toast
-            if request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content':
+            if is_htmx and target != 'content':
                 response = render(request, 'cadastro/partials/servicos.html', ctx)
                 response['HX-Trigger'] = json.dumps({
                     "show-toast": {"text": "Serviço salvo!", "level": "success"}
@@ -501,7 +509,7 @@ def servicos(request):
                 'filtros': filtros,
                 'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
             }
-            tpl = 'cadastro/partials/servicos.html' if (request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content') else 'cadastro/servicos.html'
+            tpl = 'cadastro/partials/servicos.html' if (is_htmx and target != 'content') else 'cadastro/servicos.html'
             response = render(request, tpl, ctx, status=422)
 
             # --- ERROS (inclui ValidationError do clean) ---
@@ -525,7 +533,7 @@ def servicos(request):
         'filtros': filtros,
         'profissionais': loja.funcionarios.filter(ativo=True).order_by('nome'),
     }
-    if request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content':
+    if is_htmx and target != 'content':
         return render(request, 'cadastro/partials/servicos.html', ctx)
     return render(request, 'cadastro/servicos.html', ctx)
 
@@ -615,6 +623,9 @@ def servico_delete(request, pk):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
 
+    is_htmx = request.headers.get('HX-Request')
+    target = _hx_target(request)
+
     lojas_qs = request.user.lojas.order_by('nome')
     serv = get_object_or_404(Servico, pk=pk, loja__owner=request.user)
 
@@ -639,7 +650,7 @@ def servico_delete(request, pk):
         }
 
         # Se for HTMX, retorna parcial + evento de toast
-        if request.headers.get('HX-Request') and request.headers.get('HX-Target') != 'content':
+        if is_htmx and target != 'content':
             response = render(request, 'cadastro/partials/servicos.html', ctx)
             response['HX-Trigger'] = json.dumps({
                 "show-toast": {"text": "Serviço excluído!", "level": "success"}
@@ -660,7 +671,8 @@ def clientes(request):
     if not getattr(request.user, 'is_owner', False):
         return redirect('accounts:owner_login')
 
-    target = request.headers.get('HX-Target')
+    is_htmx = request.headers.get('HX-Request')
+    target = _hx_target(request)
 
     if request.method == 'POST':
         form = ClienteForm(request.POST)
@@ -670,7 +682,7 @@ def clientes(request):
             messages.success(request, 'Cliente cadastrado com sucesso!')
             qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
             
-            if request.headers.get('HX-Request') and target != 'content':
+            if is_htmx and target != 'content':
                 form = ClienteForm()
 
                 response = render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
@@ -684,7 +696,7 @@ def clientes(request):
 
         qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
         ctx = {'form': form, 'clientes': qs}
-        if request.headers.get('HX-Request') and target != 'content':
+        if is_htmx and target != 'content':
             resp = render(request, 'cadastro/clientes.html', ctx)
             resp['HX-Retarget'] = '#modal-cliente-body'
             resp['HX-Reselect'] = '#modal-cliente-body'
@@ -696,7 +708,7 @@ def clientes(request):
 
     form = ClienteForm()
     qs = Cliente.objects.filter(owner=request.user).select_related('user').order_by('user__full_name')
-    if request.headers.get('HX-Request') and target != 'content':
+    if is_htmx and target != 'content':
         return render(request, 'cadastro/partials/clientes.html', {'clientes': qs})
     return render(request, 'cadastro/clientes.html', {'form': form, 'clientes': qs})
 
