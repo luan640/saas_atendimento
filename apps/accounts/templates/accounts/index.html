@@ -295,6 +295,57 @@
   </script>
 
   <script>
+    (function () {
+      function runScriptsSequentially(scripts, index) {
+        if (index >= scripts.length) {
+          return;
+        }
+
+        const original = scripts[index];
+        const type = (original.getAttribute('type') || '').trim();
+        if (type && type !== 'text/javascript') {
+          runScriptsSequentially(scripts, index + 1);
+          return;
+        }
+
+        const replacement = document.createElement('script');
+        for (const attr of original.attributes) {
+          replacement.setAttribute(attr.name, attr.value);
+        }
+
+        const src = replacement.getAttribute('src');
+        if (src) {
+          replacement.addEventListener('load', () => runScriptsSequentially(scripts, index + 1));
+          replacement.addEventListener('error', () => runScriptsSequentially(scripts, index + 1));
+          original.replaceWith(replacement);
+        } else {
+          replacement.textContent = original.textContent;
+          original.replaceWith(replacement);
+          runScriptsSequentially(scripts, index + 1);
+        }
+      }
+
+      document.body.addEventListener('htmx:afterSwap', (event) => {
+        const target = event.target;
+        if (!target) {
+          return;
+        }
+
+        const scripts = Array.from(target.querySelectorAll('script')).filter((script) => {
+          const type = (script.getAttribute('type') || '').trim();
+          return !type || type === 'text/javascript';
+        });
+
+        if (!scripts.length) {
+          return;
+        }
+
+        runScriptsSequentially(scripts, 0);
+      });
+    })();
+  </script>
+
+  <script>
   (function () {
     function showToast(message, level = 'success') {
       const container = document.getElementById('toasts');
