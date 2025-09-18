@@ -21,7 +21,15 @@
 {# ----------- TOOLBAR / FILTROS ---------- #}
 <div class="card dash-toolbar mb-4">
   <div class="card-body">
-    <form id="dash-filter" method="get" class="row g-3 align-items-end">
+    <form
+      id="dash-filter"
+      method="get"
+      class="row g-3 align-items-end"
+      hx-get="{% url 'accounts:owner_dashboard' %}"
+      hx-target="#owner-dashboard"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+    >
       <div class="col-12 col-md-3">
         <label class="form-label">{% trans "Início" %}</label>
         <div class="input-group">
@@ -145,6 +153,11 @@
 
   // ---- Presets de data (auto-preenche e envia) ----
   const form = document.getElementById('dash-filter');
+  if (form && lojaSelect) {
+    lojaSelect.addEventListener('change', () => {
+      form.requestSubmit();
+    });
+  }
   const startI = form?.querySelector('input[name="start"]');
   const endI   = form?.querySelector('input[name="end"]');
   function fmt(d){ return d.toISOString().slice(0,10); }
