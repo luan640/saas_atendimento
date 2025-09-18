@@ -162,6 +162,32 @@
   });
 
   // ---- ApexCharts com tema Bootstrap ----
+  const previousCharts = Array.isArray(window.ownerDashboardCharts)
+    ? window.ownerDashboardCharts
+    : [];
+  previousCharts.forEach(chart => {
+    try {
+      chart.destroy();
+    } catch (err) {
+      console.warn('Falha ao destruir gráfico ApexCharts', err);
+    }
+  });
+
+  const activeCharts = [];
+  window.ownerDashboardCharts = activeCharts;
+
+  function mountChart(selector, options) {
+    const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+    if (!el) {
+      return;
+    }
+    el.innerHTML = '';
+    const chart = new ApexCharts(el, options);
+    chart.render();
+    activeCharts.push(chart);
+    return chart;
+  }
+
   function bsVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
   const colors = [
     bsVar('--bs-primary'), bsVar('--bs-success'), bsVar('--bs-info'),
@@ -181,7 +207,7 @@
   const fmtInt = v => Number(v || 0).toLocaleString('pt-BR');
 
   // Ticket médio por loja
-  new ApexCharts(document.querySelector('#chart_ticket_medio'), {
+  mountChart('#chart_ticket_medio', {
     ...baseChart,
     chart: { ...baseChart.chart, type: 'bar', height: 300 },
     series: [{ name: 'Ticket médio', data: {{ ticket_medio_values|safe }} }],
@@ -190,10 +216,10 @@
     plotOptions: { bar: { borderRadius: 6, columnWidth: '45%' } },
     dataLabels: { enabled: false },
     tooltip: { y: { formatter: val => fmtBRL(val) } }
-  }).render();
+  });
 
   // Faturamento por funcionário
-  new ApexCharts(document.querySelector('#chart_faturamento_func'), {
+  mountChart('#chart_faturamento_func', {
     ...baseChart,
     chart: { ...baseChart.chart, type: 'bar', height: 300 },
     series: [{ name: 'Faturamento', data: {{ fat_func_values|safe }} }],
@@ -202,10 +228,10 @@
     plotOptions: { bar: { borderRadius: 6, columnWidth: '45%' } },
     dataLabels: { enabled: false },
     tooltip: { y: { formatter: val => 'R$ ' + Number(val).toFixed(2).replace('.', ',') } }
-  }).render();
+  });
 
   // Faturamento por dia por loja
-  new ApexCharts(document.querySelector('#chart_faturamento_dia'), {
+  mountChart('#chart_faturamento_dia', {
     ...baseChart,
     chart: { ...baseChart.chart, type: 'line', height: 320 },
     series: {{ fat_dia_series|safe }},
@@ -214,10 +240,10 @@
     markers: { size: 3 },
     tooltip: { y: { formatter: val => 'R$ ' + Number(val).toFixed(2).replace('.', ',') } },
     legend: { position: 'top' }
-  }).render();
+  });
 
   // Agendamentos por dia por loja
-  new ApexCharts(document.querySelector('#chart_agendamentos_dia'), {
+  mountChart('#chart_agendamentos_dia', {
     ...baseChart,
     chart: { ...baseChart.chart, type: 'line', height: 320 },
     series: {{ ag_dia_series|safe }},
@@ -226,18 +252,18 @@
     stroke: { width: 3 },
     markers: { size: 3 },
     legend: { position: 'top' }
-  }).render();
+  });
 
-  // Pies por loja (serviços)
-  {% for serv in servicos_por_loja %}
-  new ApexCharts(document.querySelector('#pie_servicos_{{ forloop.counter }}'), {
-    ...baseChart,
-    chart: { ...baseChart.chart, type: 'pie', height: 300 },
-    labels: {{ serv.labels|safe }},
-    series: {{ serv.values|safe }},
-    legend: { position: 'bottom' },
-    tooltip: { y: { formatter: val => Number(val).toLocaleString('pt-BR') } }
-  }).render();
-  {% endfor %}
+    // Pies por loja (serviços)
+    {% for serv in servicos_por_loja %}
+      mountChart('#pie_servicos_{{ forloop.counter }}', {
+        ...baseChart,
+        chart: { ...baseChart.chart, type: 'pie', height: 300 },
+        labels: {{ serv.labels|safe }},
+        series: {{ serv.values|safe }},
+        legend: { position: 'bottom' },
+        tooltip: { y: { formatter: val => Number(val).toLocaleString('pt-BR') } }
+      });
+    {% endfor %}
 })();
 </script>
