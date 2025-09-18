@@ -19,7 +19,8 @@
                 hx-target="#agendamentos-section"
                 hx-select="#agendamentos-section"
                 hx-swap="outerHTML"
-                hx-trigger="change">
+                hx-trigger="change"
+                hx-on="htmx:afterSwap: document.body.dispatchEvent(new CustomEvent('reload-owner-home', { detail: { lojaId: this.value } }))">
           {% for l in lojas %}
             <option value="{{ l.id }}" {% if loja and l.id == loja.id %}selected{% endif %}>{{ l.nome }}</option>
           {% endfor %}
