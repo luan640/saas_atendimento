@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.utils.formats import localize
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -21,6 +22,7 @@ from .utils import get_shop_slug_from_host
 
 import random
 import json
+from decimal import Decimal
 from datetime import date, timedelta, time
 from calendar import Calendar
 
@@ -193,6 +195,37 @@ def owner_dashboard(request):
         values = [s.total for s in serv_qs]
         servicos_por_loja.append({'loja': loja.nome, 'labels': json.dumps(labels), 'values': json.dumps(values)})
 
+    loja_stats = {
+        item['loja__id']: {
+            'nome': item['loja__nome'],
+            'agendamentos': item['agendamentos'],
+            'faturamento': item['faturamento'] or Decimal('0.00'),
+        }
+        for item in (
+            base.values('loja__id', 'loja__nome')
+            .annotate(
+                agendamentos=Count('id'),
+                faturamento=Sum('valor_final', filter=Q(confirmado=True, valor_final__isnull=False)),
+            )
+        )
+    }
+    loja_cards = []
+    for loja in lojas:
+        stats = loja_stats.get(
+            loja.id,
+            {'nome': loja.nome, 'agendamentos': 0, 'faturamento': Decimal('0.00')},
+        )
+        total = stats['faturamento']
+        loja_cards.append(
+            {
+                'id': loja.id,
+                'nome': stats['nome'],
+                'faturamento': total,
+                'agendamentos': stats['agendamentos'],
+                'faturamento_display': localize(total),
+            }
+        )
+
     fat_func_qs = confirmados.values('funcionario__nome').annotate(total=Sum('valor_final')).order_by('funcionario__nome')
     fat_func_labels = [f['funcionario__nome'] for f in fat_func_qs]
     fat_func_values = [float(f['total']) for f in fat_func_qs]
@@ -216,6 +249,7 @@ def owner_dashboard(request):
         'fat_func_values': json.dumps(fat_func_values),
         'no_show_count': no_show_count,
         'no_show_percent': no_show_percent,
+        'loja_cards': loja_cards,
     }
     target = request.headers.get('HX-Target')
     if request.headers.get('HX-Request') and target != 'content':
