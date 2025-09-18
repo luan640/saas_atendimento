@@ -19,6 +19,7 @@
 <div id="owner-home"
      hx-get="{% url 'accounts:owner_home' %}"
      hx-trigger="reload-owner-home from:body"
+     hx-vals="js: event && event.detail && event.detail.loja_filtro ? { loja_filtro: event.detail.loja_filtro } : {}"
      hx-target="this"
      hx-swap="innerHTML">
   {# Conteúdo dinâmico: renderizamos o parcial aqui #}

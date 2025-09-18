@@ -122,8 +122,18 @@ def owner_login(request):
 @subscription_required
 def owner_home(request):
     sub = getattr(request.user, 'subscription', None)
-    today = timezone.now().date()
-    base = Agendamento.objects.filter(loja__owner=request.user, data=today)
+    today = timezone.localdate()
+
+    lojas = request.user.lojas.order_by('nome')
+    loja_id = request.GET.get('loja_filtro') or request.session.get('loja_filtro')
+    loja = lojas.filter(id=loja_id).first() if loja_id else lojas.first()
+
+    if loja:
+        request.session['loja_filtro'] = loja.id
+        base = Agendamento.objects.filter(loja=loja, data=today)
+    else:
+        base = Agendamento.objects.filter(loja__owner=request.user, data=today)
+
     faturado = base.filter(confirmado=True, valor_final__isnull=False).aggregate(total=Sum('valor_final'))['total'] or 0
     agendamentos = base.count()
     no_show = base.filter(no_show=True).count()
@@ -132,6 +142,7 @@ def owner_home(request):
         'faturado_hoje': faturado,
         'agendamentos_hoje': agendamentos,
         'no_show_hoje': no_show,
+        'loja': loja,
     }
     target = request.headers.get('HX-Target')
     if request.headers.get('HX-Request') and target != 'content':
