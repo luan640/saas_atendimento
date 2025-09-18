@@ -133,8 +133,9 @@ def owner_home(request):
         'agendamentos_hoje': agendamentos,
         'no_show_hoje': no_show,
     }
-    target = request.headers.get('HX-Target')
-    if request.headers.get('HX-Request') and target != 'content':
+    hx_target = request.headers.get('HX-Target')
+    hx_select = request.headers.get('HX-Select')
+    if request.headers.get('HX-Request') and not (hx_target == 'content' or hx_select == '#content'):
         return render(request, 'accounts/partials/owner_home.html', ctx)
     return render(request, 'accounts/owner_home.html', ctx)
 
