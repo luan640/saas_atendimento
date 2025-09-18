@@ -193,28 +193,40 @@
   const desconto  = document.getElementById('id_teve_desconto');
   const busca     = document.getElementById('busca-servicos');
 
-  function n(x){ return Number(x || 0) }
-  function parseMoneyAttr(el){ return n(el.dataset.preco) }
-  function formatBRL(num){ return num.toFixed(2).replace('.', ',') }
+  function n(x) {
+    // Substitui a vírgula por ponto e tenta converter para número
+    const parsed = parseFloat(x.replace(',', '.'));
+    return isNaN(parsed) ? 0 : parsed;  // Se não for número, retorna 0
+  }
 
-  function calcTotal(){
+  function parseMoneyAttr(el) {
+    // Obtém o valor numérico de cada checkbox
+    return n(el.dataset.preco);
+  }
+
+  function formatBRL(num) {
+    // Formata o número para o formato BRL
+    return num.toFixed(2).replace('.', ',');
+  }
+
+  function calcTotal() {
     let total = 0, count = 0;
     document.querySelectorAll('.servico-checkbox:checked').forEach(el => {
-      total += parseMoneyAttr(el);
+      total += parseMoneyAttr(el); // Soma os valores dos serviços selecionados
       count++;
     });
     return { total, count };
   }
 
-  function refreshTotals(){
+  function refreshTotals() {
     const { total, count } = calcTotal();
-    if (badge)    badge.textContent = 'Total: R$ ' + formatBRL(total);
+    if (badge) badge.textContent = 'Total: R$ ' + formatBRL(total);
     if (badgeCnt) badgeCnt.textContent = `${count} selecionado(s)`;
-    if (valorEl && desconto && !desconto.checked){
-      valorEl.value = total.toFixed(2); // ponto p/ backend
+    if (valorEl && desconto && !desconto.checked) {
+      valorEl.value = total.toFixed(2); // Atualiza o valor final para backend
     }
   }
-
+  
   function toggleValorFinalEditable(){
     if (!valorEl || !desconto) return;
     const editable = desconto.checked;

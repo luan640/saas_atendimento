@@ -100,7 +100,6 @@
       initStage2Counters(stage2); // (definido abaixo)
     }
   });
-
   document.body.addEventListener('htmx:afterSwap', (e) => {
     const el = document.getElementById('stage2-modal');
     if (!el) return;
@@ -109,6 +108,33 @@
     // OU, se seu código é inline, chame suas funções de init aqui:
     if (typeof refreshTotals === 'function') refreshTotals();
   });
+
+  function n(x) {
+    // Substitui a vírgula por ponto e tenta converter para número
+    const parsed = parseFloat(x.replace(',', '.'));
+    return isNaN(parsed) ? 0 : parsed;  // Se não for número, retorna 0
+  }
+
+  function parseMoneyAttr(el) {
+    // Obtém o valor numérico de cada checkbox
+    return n(el.dataset.preco);
+  }
+
+  function formatBRL(num) {
+    // Formata o número para o formato BRL
+    return num.toFixed(2).replace('.', ',');
+  }
+
+  function calcTotal() {
+    let total = 0, count = 0;
+    document.querySelectorAll('.servico-checkbox:checked').forEach(el => {
+      total += parseMoneyAttr(el); // Soma os valores dos serviços selecionados
+      count++;
+    });
+    return { total, count };
+  }
+
+
 
   // === Fallback: se o hx-get “falhar silenciosamente”, força via htmx.ajax ===
   lojaSel.addEventListener('change', (e) => {
@@ -150,12 +176,11 @@
       return { total, count };
     };
 
-    const refresh = (from='manual') => {
-      const { total, count } = calc();
-      if (badge)    badge.textContent    = `Total: ${BRL.format(total)}`;
+    function refresh() {
+      const { total, count } = calcTotal();
+      if (badge) badge.textContent = 'Total: R$ ' + formatBRL(total);
       if (badgeCnt) badgeCnt.textContent = `${count} selecionado(s)`;
-      log('refresh', { from, total, count });
-    };
+    }
 
     const filter = () => {
       const q = (busca?.value || '').trim().toLowerCase();
