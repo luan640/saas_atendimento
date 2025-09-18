@@ -122,7 +122,7 @@ def owner_login(request):
 @subscription_required
 def owner_home(request):
     sub = getattr(request.user, 'subscription', None)
-    today = timezone.now().date()
+    today = timezone.localdate()
 
     lojas = request.user.lojas.order_by('nome')
     loja_id = request.GET.get('loja_filtro') or request.session.get('loja_filtro')
