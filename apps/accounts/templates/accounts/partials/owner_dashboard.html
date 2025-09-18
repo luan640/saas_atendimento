@@ -21,7 +21,15 @@
 {# ----------- TOOLBAR / FILTROS ---------- #}
 <div class="card dash-toolbar mb-4">
   <div class="card-body">
-    <form id="dash-filter" method="get" class="row g-3 align-items-end">
+    <form
+      id="dash-filter"
+      method="get"
+      class="row g-3 align-items-end"
+      hx-get="{% url 'accounts:owner_dashboard' %}"
+      hx-target="#owner-dashboard"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+    >
       <div class="col-12 col-md-3">
         <label class="form-label">{% trans "Início" %}</label>
         <div class="input-group">
@@ -59,6 +67,43 @@
       </div>
     </form>
   </div>
+</div>
+
+{# ----------- KPIs por loja ---------- #}
+<div class="row g-3 mb-4">
+  {% if loja_cards %}
+    {% for card in loja_cards %}
+      {% cycle 'primary' 'success' 'info' 'warning' 'danger' 'secondary' as tone silent %}
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card kpi-card bg-{{ tone }}-subtle">
+          <div class="kpi-body">
+            <div class="flex-grow-1">
+              <div class="kpi-title text-{{ tone }}-emphasis">{{ card.nome }}</div>
+              <div class="kpi-value text-{{ tone }}-emphasis">R$ {{ card.faturamento_display }}</div>
+              <div class="small text-{{ tone }}-emphasis opacity-75 d-flex align-items-center gap-1">
+                <iconify-icon icon="tabler:calendar-check" style="font-size:1rem"></iconify-icon>
+                {{ card.agendamentos }} agendamentos
+              </div>
+            </div>
+            <div class="kpi-icon bg-{{ tone }} text-white">
+              <iconify-icon icon="tabler:currency-real"></iconify-icon>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="col-12">
+      <div class="card kpi-card bg-body-tertiary">
+        <div class="kpi-body">
+          <div>
+            <div class="kpi-title">Nenhuma loja encontrada</div>
+            <div class="small text-body-secondary">Ajuste os filtros para visualizar os indicadores.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
 </div>
 
 {# ----------- KPIs (ex.: No-show) ---------- #}
@@ -145,6 +190,11 @@
 
   // ---- Presets de data (auto-preenche e envia) ----
   const form = document.getElementById('dash-filter');
+  if (form && lojaSelect) {
+    lojaSelect.addEventListener('change', () => {
+      form.requestSubmit();
+    });
+  }
   const startI = form?.querySelector('input[name="start"]');
   const endI   = form?.querySelector('input[name="end"]');
   function fmt(d){ return d.toISOString().slice(0,10); }
