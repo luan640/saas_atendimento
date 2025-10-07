@@ -35,10 +35,10 @@
         hx-get="{% url 'accounts:owner_fields_by_loja' %}"
         hx-trigger="change"
         hx-target="#stage2-modal"
-        hx-select="#stage2-modal"          <!-- pegue só o wrapper vindo da resposta -->
-        hx-swap="outerHTML"                 <!-- substitui o wrapper inteiro -->
-        hx-disinherit="*"                   <!-- NÃO herda hx-select/hx-target/hx-sync do form -->
-        hx-sync="closest form:queue">       <!-- evita requests perdidos se o form estiver ocupando -->
+        hx-select="#stage2-modal"          
+        hx-swap="outerHTML"                 
+        hx-disinherit="*"                   
+        hx-sync="closest form:queue">       
         <option value="">Selecione...</option>
         {% for l in lojas %}
           <option value="{{ l.id }}" {% if loja_sel and loja_sel.id == l.id %}selected{% endif %}>{{ l.nome }}</option>
@@ -71,6 +71,7 @@
 
 <script>
 (function () {
+
   const TAG = 'STAGE2';
   const log = (...a)=>console.log(`[${TAG}]`, ...a);
   const err = (...a)=>console.error(`[${TAG}]`, ...a);
@@ -95,18 +96,11 @@
   });
   document.body.addEventListener('htmx:afterSwap', (e) => {
     // quando o target #stage2-modal recebe a resposta, re-inicializa os contadores
-    if (e.target === stage2 || stage2.contains(e.target)) {
+    if (e.target === lojaSel) {
       log('afterSwap -> Stage2 carregado, inicializando contadores');
       initStage2Counters(stage2); // (definido abaixo)
+
     }
-  });
-  document.body.addEventListener('htmx:afterSwap', (e) => {
-    const el = document.getElementById('stage2-modal');
-    if (!el) return;
-    // chegou/recarregou o Stage2 => liga os handlers e atualiza badges
-    initStage2Counters?.(el);   // se você criou a função isolada
-    // OU, se seu código é inline, chame suas funções de init aqui:
-    if (typeof refreshTotals === 'function') refreshTotals();
   });
 
   function n(x) {
@@ -134,30 +128,44 @@
     return { total, count };
   }
 
-
-
-  // === Fallback: se o hx-get “falhar silenciosamente”, força via htmx.ajax ===
   lojaSel.addEventListener('change', (e) => {
-    const url = lojaSel.getAttribute('hx-get');
+    const url  = lojaSel.getAttribute('hx-get');
     const loja = e.target.value;
     if (!url || !loja) return;
 
-    // Se htmx não disparar em ~0ms, força manualmente
+    // pegue o seletor do target do próprio elemento
+    const targetSel = lojaSel.getAttribute('hx-target') || '#stage2-modal';
+    const swapMode  = lojaSel.getAttribute('hx-swap')   || 'innerHTML';
+
+    // função que resolve o elemento alvo quando for necessário
+    const getStage2 = () => document.querySelector(targetSel);
+
+    // Se o htmx não disparar rapidinho, forçamos manualmente
     setTimeout(() => {
+      const stage2 = getStage2();
+      // se ainda não existe, não há o que inspecionar — já manda o ajax
+      if (!stage2) {
+        const qs = `?loja=${encodeURIComponent(loja)}`;
+        htmx.ajax('GET', url + qs, { target: targetSel, swap: swapMode });
+        return;
+      }
+
       // Verifica se já chegou algo (para não duplicar)
-      const hasItems = stage2.querySelector('.servico-checkbox') || stage2.querySelector('[data-servicos]');
+      const hasItems =
+        stage2.querySelector('.servico-checkbox') ||
+        stage2.querySelector('[data-servicos]');
+
       if (hasItems) return; // já veio via hx-get normal
-      log('fallback ajax()', { url, loja });
+
+      // fallback manual
       const qs = `?loja=${encodeURIComponent(loja)}`;
-      htmx.ajax('GET', url + qs, { target: stage2, swap: lojaSel.getAttribute('hx-swap') || 'innerHTML' });
+      htmx.ajax('GET', url + qs, { target: targetSel, swap: swapMode });
     }, 0);
   });
 
   // === Inicializa contadores/toggle no Stage2 (chame sempre após chegar o fragmento) ===
   function initStage2Counters(scope){
     const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
-    const badge    = scope.querySelector('#badge-total-criar-atendimento') || scope.querySelector('[id^="badge-total"]');
-    const badgeCnt = scope.querySelector('#badge-count-criar-atendimento') || scope.querySelector('[id^="badge-count"]');
     const busca    = scope.querySelector('#busca-servicos-criar-atendimento');
 
     const parseMoneyAttr = (el) => {
@@ -175,12 +183,6 @@
       scope.querySelectorAll('.servico-checkbox:checked').forEach(el => { total += parseMoneyAttr(el); count++; });
       return { total, count };
     };
-
-    function refresh() {
-      const { total, count } = calcTotal();
-      if (badge) badge.textContent = 'Total: R$ ' + formatBRL(total);
-      if (badgeCnt) badgeCnt.textContent = `${count} selecionado(s)`;
-    }
 
     const filter = () => {
       const q = (busca?.value || '').trim().toLowerCase();
@@ -201,12 +203,8 @@
     if (busca) busca.addEventListener('input', filter);
 
     // Primeira passada
-    refresh('init');
     filter();
   }
 
-
-
-  log('ready; aguardando escolha da loja…');
 })();
 </script>

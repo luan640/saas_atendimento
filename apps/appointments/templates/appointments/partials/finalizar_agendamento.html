@@ -271,13 +271,6 @@
   const show = () => spin && spin.classList.remove('d-none');
   const hide = () => spin && spin.classList.add('d-none');
 
-  if (form){
-    form.addEventListener('htmx:beforeRequest', (e) => { if (e.target === form) show(); });
-    ['htmx:afterRequest','htmx:responseError','htmx:sendError','htmx:timeout'].forEach(evt => {
-      form.addEventListener(evt, (e) => { if (e.target === form) hide(); });
-    });
-  }
-
   // Inicialização
   toggleValorFinalEditable();
   refreshTotals();
